@@ -68,6 +68,7 @@ export default function NewCasePage() {
   const [uploadingTarget, setUploadingTarget] = useState<string | null>(null);
   const viperSerialInputRef = useRef<HTMLInputElement | null>(null);
   const vlsSerialInputRef = useRef<HTMLInputElement | null>(null);
+  const formTopRef = useRef<HTMLDivElement | null>(null);
 
   const methods = useForm<ServiceCaseFormValues>({
     resolver: zodResolver(formSchema),
@@ -106,6 +107,12 @@ export default function NewCasePage() {
     setValue("checklist_items", flatItems);
     setChecklistSectionIndex(0);
   }, [sections, setValue]);
+
+  useEffect(() => {
+    if (currentStep === 2) {
+      formTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [checklistSectionIndex, currentStep]);
 
   const deviations = watch("checklist_items").filter(
     (item) => item.status === "AVVIKELSE" || item.status === "EJ_KONTROLLERAD"
@@ -287,6 +294,7 @@ export default function NewCasePage() {
 
         <FormProvider {...methods}>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pb-6">
+            <div ref={formTopRef} />
             {currentStep === 1 && (
               <Card>
                 <CardHeader><CardTitle>Allmän information</CardTitle></CardHeader>
