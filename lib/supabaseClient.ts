@@ -1,5 +1,4 @@
-import { createBrowserClient } from "@supabase/auth-helpers-nextjs";
-import { createServerClient } from "@supabase/auth-helpers-nextjs";
+import { createBrowserClient, createServerClient } from "@supabase/ssr";
 import type { cookies } from "next/headers";
 
 export function createClientSupabaseBrowser() {
