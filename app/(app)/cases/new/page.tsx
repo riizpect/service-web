@@ -183,7 +183,6 @@ export default function NewCasePage() {
     const yyyyMmDd = now.toISOString().slice(0, 10);
     const sampleCustomers = ["Karolinska", "Sahlgrenska", "St. Goran", "Aleris", "Region Skane"];
     const sampleLocations = ["Stockholm", "Göteborg", "Malmö", "Uppsala", "Linköping"];
-    const sampleTechs = ["Andreas", "Johan", "Erik", "Sara", "Mikael"];
     const sampleComments = [
       "Kontrollerad enligt rutin. Mindre slitage observerat.",
       "Funktionstest godkänt. Rekommenderar ny kontroll inom 3 månader.",
@@ -234,7 +233,7 @@ export default function NewCasePage() {
     setValue("customer_name", randomPick(sampleCustomers));
     setValue("location", randomPick(sampleLocations));
     setValue("service_date", yyyyMmDd);
-    setValue("technician_name", randomPick(sampleTechs));
+    setValue("technician_name", "Andreas Selin");
     setValue("reference_number", `AO-${Math.floor(10000 + Math.random() * 89999)}`);
     if (showViperFields) {
       setValue("viper_serial_number", `VIP-${Math.floor(100000 + Math.random() * 899999)}`);

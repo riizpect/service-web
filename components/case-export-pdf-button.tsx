@@ -42,6 +42,12 @@ interface CaseExportPdfButtonProps {
 export function CaseExportPdfButton(props: CaseExportPdfButtonProps) {
   const handleDownload = () => {
     const doc = new jsPDF();
+    const formatChecklistStatus = (status: string) => {
+      if (status === "ATGÄRDAD") return "Åtgärdad";
+      if (status === "AVVIKELSE") return "Avvikelse";
+      if (status === "EJ_KONTROLLERAD") return "Ej kontrollerad";
+      return status;
+    };
     const normalizedFinalStatus = props.finalStatus ?? "Ej ifyllt";
     const verdictLabel =
       normalizedFinalStatus === "Godkänd"
@@ -84,7 +90,7 @@ export function CaseExportPdfButton(props: CaseExportPdfButtonProps) {
       body: props.checklistItems.map((item) => [
         item.section,
         item.label,
-        item.status,
+        formatChecklistStatus(item.status),
         item.comment ?? "-",
         item.partReplaced ? "Ja" : "Nej"
       ]),
