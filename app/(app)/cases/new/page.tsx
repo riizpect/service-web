@@ -39,7 +39,7 @@ const formSchema = z.object({
   parts: z
     .array(
       z.object({
-        part_name: z.string().min(1),
+        part_name: z.string().optional().default(""),
         part_number: z.string().optional(),
         quantity: z.coerce.number().min(1).default(1),
         note: z.string().optional(),
@@ -195,7 +195,9 @@ export default function NewCasePage() {
         setSaving(null);
         return;
       }
-      const partsToSave = values.parts.filter((part) => part.part_name?.trim());
+      const partsToSave = values.parts.filter(
+        (part) => Boolean(part.needs_order) || Boolean(part.part_name?.trim())
+      );
       const requiresReturnVisit = partsToSave.some((part) => part.needs_order);
       const { error: caseFlagError } = await supabase
         .from("service_cases")
@@ -211,7 +213,7 @@ export default function NewCasePage() {
         const { error: partsError } = await supabase.from("service_parts").insert(
           partsToSave.map((part) => ({
             case_id: caseId,
-            part_name: part.part_name,
+            part_name: part.part_name?.trim() || "Defekt del (ej specificerad)",
             part_number: part.part_number,
             quantity: part.quantity,
             note: part.note,
@@ -265,7 +267,7 @@ export default function NewCasePage() {
   const addOrderPartFromDeviation = (itemLabel: string, checklistIndex: number) => {
     setValue(`checklist_items.${checklistIndex}.status`, "AVVIKELSE");
     partsArray.append({
-      part_name: "",
+      part_name: "Defekt del (ej specificerad)",
       part_number: "",
       quantity: 1,
       note: "",
@@ -536,7 +538,7 @@ export default function NewCasePage() {
                             size="sm"
                             onClick={() => addOrderPartFromDeviation(field.item_label, index)}
                           >
-                            Avvikelse: lägg till del att beställa
+                            Kryssa defekt del (beställs senare)
                           </Button>
                         </div>
                       );
@@ -568,7 +570,8 @@ export default function NewCasePage() {
                   {tab === "parts" && (
                     <div className="space-y-2">
                       <p className="text-xs text-muted-foreground">
-                        Markera "Behöver beställas" för delar som saknas nu och kräver återbesök.
+                        Snabbt läge: klicka "Kryssa defekt del" i checklistan. Delen läggs till
+                        automatiskt utan artikelnummer.
                       </p>
                       <Button
                         type="button"
@@ -590,8 +593,8 @@ export default function NewCasePage() {
                       </Button>
                       {partsArray.fields.map((field, index) => (
                         <div key={field.id} className="rounded-md border p-3 space-y-2">
-                          <Input placeholder="Delnamn" {...register(`parts.${index}.part_name`)} />
-                          <Input placeholder="Artikelnummer" {...register(`parts.${index}.part_number`)} />
+                          <Input placeholder="Delnamn (valfritt)" {...register(`parts.${index}.part_name`)} />
+                          <Input placeholder="Artikelnummer (valfritt)" {...register(`parts.${index}.part_number`)} />
                           <Input type="number" min={1} placeholder="Antal" {...register(`parts.${index}.quantity`, { valueAsNumber: true })} />
                           <Textarea placeholder="Notering" {...register(`parts.${index}.note`)} />
                           <label className="flex items-center gap-2 text-xs">

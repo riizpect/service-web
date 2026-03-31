@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createClientSupabaseServer } from "@/lib/supabaseClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -111,6 +111,24 @@ export default async function CasePage({ params }: CasePageProps) {
       ? "danger"
       : "warning";
 
+  const deleteCase = async () => {
+    "use server";
+    const cookieStoreForAction = cookies();
+    const supabaseForAction = createClientSupabaseServer(cookieStoreForAction);
+    const {
+      data: { user: actionUser }
+    } = await supabaseForAction.auth.getUser();
+    if (!actionUser) redirect("/login");
+
+    await supabaseForAction
+      .from("service_cases")
+      .delete()
+      .eq("id", params.id)
+      .eq("created_by", actionUser.id);
+
+    redirect("/dashboard");
+  };
+
   return (
     <main className="flex-1">
       <div className="space-y-4">
@@ -129,6 +147,11 @@ export default async function CasePage({ params }: CasePageProps) {
             </p>
           </div>
           <div className="flex gap-2">
+            <Link href="/dashboard">
+              <Button variant="outline" size="sm">
+                Tillbaka
+              </Button>
+            </Link>
             <Badge variant={statusVariant as any}>
               {serviceCase.is_draft
                 ? "Utkast"
@@ -140,6 +163,11 @@ export default async function CasePage({ params }: CasePageProps) {
                 Redigera
               </Button>
             </Link>
+            <form action={deleteCase}>
+              <Button type="submit" variant="destructive" size="sm">
+                Ta bort
+              </Button>
+            </form>
           </div>
           </div>
         </div>

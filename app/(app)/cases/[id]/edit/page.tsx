@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClientSupabaseBrowser } from "@/lib/supabaseClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -167,7 +168,7 @@ export default function EditCasePage({ params }: { params: { id: string } }) {
       ...prev,
       {
         id: `new-${Date.now()}`,
-        part_name: "",
+        part_name: "Defekt del (ej specificerad)",
         part_number: "",
         quantity: 1,
         note: "",
@@ -184,7 +185,9 @@ export default function EditCasePage({ params }: { params: { id: string } }) {
     setSaving(true);
     setError(null);
     const supabase = createClientSupabaseBrowser();
-    const validParts = parts.filter((part) => part.part_name?.trim());
+    const validParts = parts.filter(
+      (part) => Boolean(part.needs_order) || Boolean(part.part_name?.trim())
+    );
     const requiresReturnVisit = validParts.some((part) => part.needs_order);
     const { error: saveError } = await supabase
       .from("service_cases")
@@ -230,7 +233,7 @@ export default function EditCasePage({ params }: { params: { id: string } }) {
       await supabase.from("service_parts").insert(
         validParts.map((part) => ({
           case_id: params.id,
-          part_name: part.part_name,
+          part_name: part.part_name?.trim() || "Defekt del (ej specificerad)",
           part_number: part.part_number,
           quantity: part.quantity,
           note: part.note,
@@ -268,7 +271,14 @@ export default function EditCasePage({ params }: { params: { id: string } }) {
   return (
     <main className="flex-1">
       <div className="space-y-4">
-        <h1 className="text-lg font-semibold text-slate-900">Redigera serviceärende</h1>
+        <div className="flex items-center justify-between gap-2">
+          <h1 className="text-lg font-semibold text-slate-900">Redigera serviceärende</h1>
+          <Link href={`/cases/${params.id}`}>
+            <Button type="button" variant="outline" size="sm">
+              Tillbaka
+            </Button>
+          </Link>
+        </div>
 
         <Card>
           <CardHeader>
@@ -458,7 +468,7 @@ export default function EditCasePage({ params }: { params: { id: string } }) {
                           addOrderPartFromDeviation(item.section_key, item.item_key, item.item_label)
                         }
                       >
-                        Avvikelse: lägg till del att beställa
+                        Kryssa defekt del (beställs senare)
                       </Button>
                     </div>
                   ))}
@@ -473,7 +483,8 @@ export default function EditCasePage({ params }: { params: { id: string } }) {
           </CardHeader>
           <CardContent className="space-y-2">
             <p className="text-xs text-muted-foreground">
-              Markera "Behöver beställas" för delar som inte kunde bytas på plats och kräver återbesök.
+              Snabbt läge: klicka "Kryssa defekt del" i checklistan. Delen läggs till automatiskt
+              utan artikelnummer.
             </p>
             <Button
               type="button"
@@ -500,7 +511,7 @@ export default function EditCasePage({ params }: { params: { id: string } }) {
             {parts.map((part, index) => (
               <div key={part.id} className="rounded-md border p-3 space-y-2">
                 <Input
-                  placeholder="Delnamn"
+                  placeholder="Delnamn (valfritt)"
                   value={part.part_name}
                   onChange={(event) =>
                     setParts((prev) =>
@@ -513,7 +524,7 @@ export default function EditCasePage({ params }: { params: { id: string } }) {
                   }
                 />
                 <Input
-                  placeholder="Artikelnummer"
+                  placeholder="Artikelnummer (valfritt)"
                   value={part.part_number ?? ""}
                   onChange={(event) =>
                     setParts((prev) =>
