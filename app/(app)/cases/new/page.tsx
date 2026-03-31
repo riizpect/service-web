@@ -1063,7 +1063,7 @@ export default function NewCasePage() {
                         disabled={!!saving}
                         onClick={() => {
                           setSaving("draft");
-                          handleSubmit(onSubmit, onInvalidSubmit)();
+                          void saveCase(getValues(), "draft", false);
                         }}
                       >
                         {saving === "draft" ? "Sparar..." : "Spara utkast"}
