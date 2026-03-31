@@ -94,7 +94,7 @@ export default function NewCasePage() {
         section_key: section.key,
         item_key: item.key,
         item_label: item.label,
-        status: "OK" as ChecklistStatus,
+        status: "EJ_KONTROLLERAD" as ChecklistStatus,
         comment: "",
         part_replaced: false
       }))
@@ -238,6 +238,20 @@ export default function NewCasePage() {
                       return (
                         <div key={field.id} className={`rounded-md border p-3 space-y-2 ${isDeviation ? "border-red-400 bg-red-50" : ""}`}>
                           <p className="text-sm font-medium">{field.item_label}</p>
+                          <label className="flex items-center gap-2 rounded-md border bg-background px-2 py-2 text-sm">
+                            <input
+                              type="checkbox"
+                              className="h-5 w-5"
+                              checked={statusValue === "OK"}
+                              onChange={(event) =>
+                                setValue(
+                                  `checklist_items.${index}.status`,
+                                  event.target.checked ? "OK" : "EJ_KONTROLLERAD"
+                                )
+                              }
+                            />
+                            Kontrollerad och OK
+                          </label>
                           <Select
                             value={statusValue}
                             onChange={(e) => setValue(`checklist_items.${index}.status`, e.target.value as ChecklistStatus)}
