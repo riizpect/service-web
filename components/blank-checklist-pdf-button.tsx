@@ -43,7 +43,7 @@ export function BlankChecklistPdfButton({ productType }: BlankChecklistPdfButton
           ? ((doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6)
           : 90 + index * 10,
         head: [[section.title, "OK", "Åtgärdad", "Avvikelse", "Ej kontrollerad", "Kommentar"]],
-        body: section.items.map((item) => [item.label, "☐", "☐", "☐", "☐", ""]),
+        body: section.items.map((item) => [item.label, "", "", "", "", ""]),
         styles: { fontSize: 8, overflow: "linebreak", minCellHeight: 8, valign: "middle" },
         headStyles: { fillColor: [30, 64, 175] },
         columnStyles: {
@@ -53,6 +53,15 @@ export function BlankChecklistPdfButton({ productType }: BlankChecklistPdfButton
           3: { cellWidth: 20, halign: "center" },
           4: { cellWidth: 28, halign: "center" },
           5: { cellWidth: 30 }
+        },
+        didDrawCell: (data) => {
+          if (data.section !== "body") return;
+          if (data.column.index < 1 || data.column.index > 4) return;
+          const size = 4.5;
+          const x = data.cell.x + (data.cell.width - size) / 2;
+          const y = data.cell.y + (data.cell.height - size) / 2;
+          doc.setDrawColor(55, 65, 81);
+          doc.rect(x, y, size, size);
         }
       });
     });
@@ -64,13 +73,23 @@ export function BlankChecklistPdfButton({ productType }: BlankChecklistPdfButton
         : 250,
       head: [["Slutbedömning", "Att fylla i"]],
       body: [
-        ["Godkänd", "[]"],
-        ["Godkänd med anmärkning", "[]"],
-        ["Ej godkänd", "[]"],
-        ["Återbesök krävs", "[]"],
+        ["Godkänd", ""],
+        ["Godkänd med anmärkning", ""],
+        ["Ej godkänd", ""],
+        ["Återbesök krävs", ""],
         ["Kommentar", ""]
       ],
-      styles: { fontSize: 9, minCellHeight: 8 }
+      styles: { fontSize: 9, minCellHeight: 8 },
+      didDrawCell: (data) => {
+        if (data.section !== "body") return;
+        if (data.column.index !== 1) return;
+        if (data.row.index > 3) return;
+        const size = 5.5;
+        const x = data.cell.x + (data.cell.width - size) / 2;
+        const y = data.cell.y + (data.cell.height - size) / 2;
+        doc.setDrawColor(55, 65, 81);
+        doc.rect(x, y, size, size);
+      }
     });
 
     doc.save(`serviceblankett-${productLabel.replace(/\s+/g, "-")}.pdf`);
