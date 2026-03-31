@@ -114,74 +114,85 @@ export default function NewCasePage() {
   const onSubmit = async (values: ServiceCaseFormValues) => {
     if (!saving) return;
     setError(null);
-    const supabase = createClientSupabaseBrowser();
-    const { data: userData } = await supabase.auth.getUser();
-    const userId = userData.user?.id;
-    if (!userId) {
-      setError("Kunde inte läsa inloggad användare.");
-      setSaving(null);
-      return;
-    }
+    try {
+      const supabase = createClientSupabaseBrowser();
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id;
+      if (!userId) {
+        setError("Kunde inte läsa inloggad användare.");
+        setSaving(null);
+        return;
+      }
 
-    const { data: caseData, error: caseError } = await supabase
-      .from("service_cases")
-      .insert({
-        created_by: userId,
-        customer_name: values.customer_name,
-        location: values.location,
-        service_date: values.service_date,
-        technician_name: values.technician_name,
-        product_type: values.product_type === "VIPER_VLS" ? "VIPER + VLS" : values.product_type,
-        viper_serial_number: values.viper_serial_number,
-        vls_serial_number: values.vls_serial_number,
-        reference_number: values.reference_number,
-        final_status: saving === "complete" ? values.final_status : null,
-        final_comment: saving === "complete" ? values.final_comment : null,
-        is_draft: saving === "draft"
-      })
-      .select("id")
-      .single();
+      const { data: caseData, error: caseError } = await supabase
+        .from("service_cases")
+        .insert({
+          created_by: userId,
+          customer_name: values.customer_name,
+          location: values.location,
+          service_date: values.service_date,
+          technician_name: values.technician_name,
+          product_type:
+            values.product_type === "VIPER_VLS" ? "VIPER + VLS" : values.product_type,
+          viper_serial_number: values.viper_serial_number,
+          vls_serial_number: values.vls_serial_number,
+          reference_number: values.reference_number,
+          final_status: saving === "complete" ? values.final_status : null,
+          final_comment: saving === "complete" ? values.final_comment : null,
+          is_draft: saving === "draft"
+        })
+        .select("id")
+        .single();
 
-    if (caseError || !caseData) {
-      setError("Kunde inte spara ärendet.");
-      setSaving(null);
-      return;
-    }
+      if (caseError || !caseData) {
+        setError("Kunde inte spara ärendet.");
+        setSaving(null);
+        return;
+      }
 
-    const caseId = caseData.id;
-    await supabase.from("service_checklist_items").insert(
-      values.checklist_items.map((item) => ({
-        case_id: caseId,
-        section_key: item.section_key,
-        item_key: item.item_key,
-        item_label: item.item_label,
-        item_status: item.status,
-        comment: item.comment,
-        part_replaced: item.part_replaced
-      }))
-    );
-    if (values.parts.length > 0) {
-      await supabase.from("service_parts").insert(
-        values.parts.map((part) => ({
+      const caseId = caseData.id;
+      await supabase.from("service_checklist_items").insert(
+        values.checklist_items.map((item) => ({
           case_id: caseId,
-          part_name: part.part_name,
-          part_number: part.part_number,
-          quantity: part.quantity,
-          note: part.note
+          section_key: item.section_key,
+          item_key: item.item_key,
+          item_label: item.item_label,
+          item_status: item.status,
+          comment: item.comment,
+          part_replaced: item.part_replaced
         }))
       );
-    }
-    if (values.photos.length > 0) {
-      await supabase.from("service_photos").insert(
-        values.photos.map((photo) => ({
-          case_id: caseId,
-          image_url: photo.image_url,
-          caption: photo.caption
-        }))
-      );
-    }
+      if (values.parts.length > 0) {
+        await supabase.from("service_parts").insert(
+          values.parts.map((part) => ({
+            case_id: caseId,
+            part_name: part.part_name,
+            part_number: part.part_number,
+            quantity: part.quantity,
+            note: part.note
+          }))
+        );
+      }
+      if (values.photos.length > 0) {
+        await supabase.from("service_photos").insert(
+          values.photos.map((photo) => ({
+            case_id: caseId,
+            image_url: photo.image_url,
+            caption: photo.caption
+          }))
+        );
+      }
 
-    router.push(`/cases/${caseId}`);
+      router.push(`/cases/${caseId}`);
+    } catch {
+      setError("Något gick fel vid sparning. Försök igen.");
+      setSaving(null);
+    }
+  };
+
+  const onInvalidSubmit = () => {
+    setSaving(null);
+    setError("Formuläret är inte komplett. Kontrollera obligatoriska fält.");
   };
 
   const uploadImage = async (file: File, caption: string) => {
@@ -501,10 +512,25 @@ export default function NewCasePage() {
                     <Button type="button" variant="secondary" onClick={() => setValue("step", currentStep + 1)}>Nästa steg</Button>
                   ) : (
                     <>
-                      <Button type="button" variant="outline" disabled={!!saving} onClick={() => { setSaving("draft"); handleSubmit(onSubmit)(); }}>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={!!saving}
+                        onClick={() => {
+                          setSaving("draft");
+                          handleSubmit(onSubmit, onInvalidSubmit)();
+                        }}
+                      >
                         {saving === "draft" ? "Sparar..." : "Spara utkast"}
                       </Button>
-                      <Button type="button" disabled={!!saving} onClick={() => { setSaving("complete"); handleSubmit(onSubmit)(); }}>
+                      <Button
+                        type="button"
+                        disabled={!!saving}
+                        onClick={() => {
+                          setSaving("complete");
+                          handleSubmit(onSubmit, onInvalidSubmit)();
+                        }}
+                      >
                         {saving === "complete" ? "Sparar..." : "Slutför ärende"}
                       </Button>
                     </>
