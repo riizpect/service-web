@@ -19,6 +19,20 @@ type ChecklistItemRow = {
   part_replaced: boolean | null;
 };
 
+type ServicePartRow = {
+  id: string;
+  part_name: string;
+  part_number: string | null;
+  quantity: number;
+  note: string | null;
+};
+
+type ServicePhotoRow = {
+  id: string;
+  image_url: string;
+  caption: string | null;
+};
+
 export default async function CasePage({ params }: CasePageProps) {
   const cookieStore = cookies();
   const supabase = createClientSupabaseServer(cookieStore);
@@ -49,6 +63,8 @@ export default async function CasePage({ params }: CasePageProps) {
     .eq("case_id", params.id);
 
   const typedItems: ChecklistItemRow[] = (items ?? []) as ChecklistItemRow[];
+  const typedParts: ServicePartRow[] = (parts ?? []) as ServicePartRow[];
+  const typedPhotos: ServicePhotoRow[] = (photos ?? []) as ServicePhotoRow[];
 
   const itemsBySection = typedItems.reduce<Record<string, ChecklistItemRow[]>>(
     (acc: Record<string, ChecklistItemRow[]>, item: ChecklistItemRow) => {
@@ -205,10 +221,10 @@ export default async function CasePage({ params }: CasePageProps) {
               <CardTitle>Ersatta delar</CardTitle>
             </CardHeader>
             <CardContent className="space-y-1 text-xs md:text-sm">
-              {!parts || parts.length === 0 ? (
+              {typedParts.length === 0 ? (
                 <p className="text-muted-foreground">Inga ersatta delar registrerade.</p>
               ) : (
-                parts.map((p) => (
+                typedParts.map((p: ServicePartRow) => (
                   <div
                     key={p.id}
                     className="flex flex-col rounded-md border px-3 py-2"
@@ -234,13 +250,13 @@ export default async function CasePage({ params }: CasePageProps) {
               <CardTitle>Bilder</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {!photos || photos.length === 0 ? (
+              {typedPhotos.length === 0 ? (
                 <p className="text-xs text-muted-foreground">
                   Inga bilder uppladdade i detta ärende.
                 </p>
               ) : (
                 <div className="grid grid-cols-2 gap-2">
-                  {photos.map((photo) => (
+                  {typedPhotos.map((photo: ServicePhotoRow) => (
                     <div key={photo.id} className="space-y-1">
                       {/* For MVP we just render img from URL */}
                       {/* eslint-disable-next-line @next/next/no-img-element */}
