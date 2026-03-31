@@ -7,7 +7,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { CaseExportPdfButton } from "@/components/case-export-pdf-button";
 import { ConfirmDeleteCaseForm } from "@/components/confirm-delete-case-form";
-import { getSectionTitleByKey } from "@/lib/checklistConfig";
+import { getChecklistForProductType, getSectionTitleByKey, type ProductType } from "@/lib/checklistConfig";
 
 interface CasePageProps {
   params: { id: string };
@@ -62,7 +62,6 @@ export default async function CasePage({ params }: CasePageProps) {
     .from("service_checklist_items")
     .select("*")
     .eq("case_id", params.id)
-    .order("section_key")
     .order("item_key");
 
   const { data: parts } = await supabase
@@ -76,6 +75,27 @@ export default async function CasePage({ params }: CasePageProps) {
     .eq("case_id", params.id);
 
   const typedItems: ChecklistItemRow[] = (items ?? []) as ChecklistItemRow[];
+  const normalizedProductType: ProductType =
+    serviceCase.product_type === "VIPER + VLS"
+      ? "VIPER_VLS"
+      : ((serviceCase.product_type as ProductType) ?? "VIPER");
+  const orderedSections = getChecklistForProductType(normalizedProductType);
+  const sectionOrder = new Map(orderedSections.map((section, index) => [section.key, index]));
+  const itemOrder = new Map(
+    orderedSections.flatMap((section) =>
+      section.items.map((item, index) => [`${section.key}::${item.key}`, index] as const)
+    )
+  );
+  const sortedItems = [...typedItems].sort((a, b) => {
+    const sectionDiff =
+      (sectionOrder.get(a.section_key) ?? Number.MAX_SAFE_INTEGER) -
+      (sectionOrder.get(b.section_key) ?? Number.MAX_SAFE_INTEGER);
+    if (sectionDiff !== 0) return sectionDiff;
+    return (
+      (itemOrder.get(`${a.section_key}::${a.item_key}`) ?? Number.MAX_SAFE_INTEGER) -
+      (itemOrder.get(`${b.section_key}::${b.item_key}`) ?? Number.MAX_SAFE_INTEGER)
+    );
+  });
   const typedParts: ServicePartRow[] = (parts ?? []) as ServicePartRow[];
   const typedPhotos: ServicePhotoRow[] = (photos ?? []) as ServicePhotoRow[];
   const partsToOrder = typedParts.filter((part) => part.needs_order);
@@ -95,7 +115,7 @@ export default async function CasePage({ params }: CasePageProps) {
       !(photo.caption ?? "").startsWith("ITEM|")
   );
 
-  const itemsBySection = typedItems.reduce<Record<string, ChecklistItemRow[]>>(
+  const itemsBySection = sortedItems.reduce<Record<string, ChecklistItemRow[]>>(
     (acc: Record<string, ChecklistItemRow[]>, item: ChecklistItemRow) => {
       if (!item) return acc;
       if (!acc[item.section_key]) acc[item.section_key] = [];
@@ -254,7 +274,7 @@ export default async function CasePage({ params }: CasePageProps) {
                 referenceNumber={serviceCase.reference_number}
                 finalStatus={serviceCase.final_status}
                 finalComment={serviceCase.final_comment}
-                checklistItems={typedItems.map((item) => ({
+                checklistItems={sortedItems.map((item) => ({
                   section: getSectionTitleByKey(item.section_key),
                   label: item.item_label,
                   status: item.item_status,
