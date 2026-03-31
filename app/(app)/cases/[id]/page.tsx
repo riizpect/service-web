@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { CaseExportPdfButton } from "@/components/case-export-pdf-button";
 
 interface CasePageProps {
   params: { id: string };
@@ -16,6 +17,7 @@ type ChecklistItemRow = {
   item_key: string;
   item_label: string;
   item_status: string;
+  comment: string | null;
   part_replaced: boolean | null;
 };
 
@@ -161,9 +163,27 @@ export default async function CasePage({ params }: CasePageProps) {
                   {serviceCase.final_comment}
                 </p>
               )}
-              <Button variant="outline" size="sm" disabled>
-                Exportera PDF (kommer senare)
-              </Button>
+              <CaseExportPdfButton
+                caseId={serviceCase.id}
+                customerName={serviceCase.customer_name}
+                serviceDate={serviceCase.service_date}
+                location={serviceCase.location}
+                technicianName={serviceCase.technician_name}
+                productType={serviceCase.product_type}
+                viperSerial={serviceCase.viper_serial_number}
+                vlsSerial={serviceCase.vls_serial_number}
+                referenceNumber={serviceCase.reference_number}
+                finalStatus={serviceCase.final_status}
+                finalComment={serviceCase.final_comment}
+                checklistItems={typedItems.map((item) => ({
+                  section: item.section_key,
+                  label: item.item_label,
+                  status: item.item_status,
+                  comment: item.comment,
+                  partReplaced: Boolean(item.part_replaced)
+                }))}
+                parts={typedParts}
+              />
             </CardContent>
           </Card>
         </div>
