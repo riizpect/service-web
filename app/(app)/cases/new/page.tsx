@@ -557,7 +557,7 @@ export default function NewCasePage() {
                         disabled={!!saving}
                         onClick={() => {
                           setSaving("complete");
-                          handleSubmit(onSubmit, onInvalidSubmit)();
+                          void saveCase(getValues(), "complete", true);
                         }}
                       >
                         {saving === "complete" ? "Sparar..." : "Slutför ärende"}
