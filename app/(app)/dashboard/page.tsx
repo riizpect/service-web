@@ -54,11 +54,8 @@ export default async function DashboardPage() {
   return (
     <main className="flex-1">
       <div className="space-y-4">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
-          <p className="text-xs uppercase tracking-wide text-slate-500">Översikt</p>
-          <h1 className="text-xl font-semibold">Serviceärenden</h1>
-        </div>
         <div className="flex items-center justify-between gap-2">
+          <h1 className="text-lg font-semibold text-slate-900">Serviceärenden</h1>
           <Link href="/cases/new">
             <Button size="lg">Nytt serviceärende</Button>
           </Link>

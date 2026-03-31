@@ -1,0 +1,58 @@
+"use client";
+
+import type { ReactNode } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { LayoutDashboard, PlusSquare, FileText } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const navItems = [
+  { href: "/dashboard", label: "Översikt", icon: LayoutDashboard },
+  { href: "/cases/new", label: "Nytt", icon: PlusSquare },
+  { href: "/dashboard", label: "Ärenden", icon: FileText }
+];
+
+export function AppShell({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+
+  return (
+    <div className="min-h-screen bg-slate-100">
+      <div className="mx-auto w-full max-w-5xl px-3 pb-24 pt-4 md:px-6 md:pt-6">
+        <header className="mb-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
+            Ferno Serviceverktyg
+          </p>
+          <h1 className="text-base font-semibold text-slate-900 md:text-lg">
+            Preventivt underhåll
+          </h1>
+        </header>
+        {children}
+      </div>
+
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden">
+        <div className="mx-auto flex max-w-5xl items-center justify-around px-2 py-2">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const active = pathname.startsWith(item.href);
+            return (
+              <Link
+                key={`${item.href}-${item.label}`}
+                href={item.href}
+                className={cn(
+                  "flex min-w-[82px] flex-col items-center gap-1 rounded-xl px-3 py-2 text-[11px] font-medium transition-colors",
+                  active
+                    ? "bg-primary/10 text-primary"
+                    : "text-slate-500 hover:text-slate-900"
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+    </div>
+  );
+}
+

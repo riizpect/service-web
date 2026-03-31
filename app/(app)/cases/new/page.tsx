@@ -256,7 +256,7 @@ export default function NewCasePage() {
   return (
     <main className="flex-1">
       <div className="space-y-4">
-        <h1 className="text-xl font-semibold">Nytt serviceärende</h1>
+        <h1 className="text-lg font-semibold text-slate-900">Nytt serviceärende</h1>
         <div className="h-2 w-full rounded-full bg-muted">
           <div
             className="h-2 rounded-full bg-primary transition-all"
@@ -270,7 +270,7 @@ export default function NewCasePage() {
         </div>
 
         <FormProvider {...methods}>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pb-24">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pb-6">
             {currentStep === 1 && (
               <Card>
                 <CardHeader><CardTitle>Allmän information</CardTitle></CardHeader>
@@ -517,8 +517,8 @@ export default function NewCasePage() {
 
             {error && <p className="text-sm text-red-600">{error}</p>}
 
-            <div className="fixed bottom-0 left-0 right-0 border-t bg-background/95 p-3 backdrop-blur">
-              <div className="container flex items-center justify-between gap-2">
+            <div className="sticky bottom-16 z-30 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-sm backdrop-blur md:bottom-4">
+              <div className="flex items-center justify-between gap-2">
                 <div className="flex gap-2">
                   {currentStep === 2 && checklistSectionIndex > 0 ? (
                     <Button type="button" variant="outline" onClick={() => setChecklistSectionIndex((prev) => prev - 1)}>Föregående sektion</Button>

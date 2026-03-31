@@ -102,7 +102,7 @@ export default async function CasePage({ params }: CasePageProps) {
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <h1 className="text-xl font-semibold">
+            <h1 className="text-lg font-semibold text-slate-900">
               {serviceCase.customer_name || "Serviceärende"}
             </h1>
             <p className="text-xs text-muted-foreground">
