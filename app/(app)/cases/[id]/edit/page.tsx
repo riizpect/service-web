@@ -435,6 +435,7 @@ export default function EditCasePage({ params }: { params: { id: string } }) {
                       </Select>
                       <Textarea
                         placeholder="Kommentar"
+                        className="min-h-[120px] resize-y"
                         value={item.comment ?? ""}
                         onChange={(event) =>
                           setChecklist((prev) =>

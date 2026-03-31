@@ -88,9 +88,42 @@ export function CaseExportPdfButton(props: CaseExportPdfButtonProps) {
         item.comment ?? "-",
         item.partReplaced ? "Ja" : "Nej"
       ]),
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [30, 64, 175] }
+      styles: { fontSize: 8, overflow: "linebreak", cellPadding: 2.2, valign: "top" },
+      headStyles: { fillColor: [30, 64, 175] },
+      columnStyles: {
+        0: { cellWidth: 28 },
+        1: { cellWidth: 58 },
+        2: { cellWidth: 20 },
+        3: { cellWidth: 62 },
+        4: { cellWidth: 20 }
+      }
     });
+
+    const commentRows = props.checklistItems
+      .filter((item) => Boolean(item.comment?.trim()))
+      .map((item) => [
+        item.section,
+        item.label,
+        item.comment?.trim() ?? "-"
+      ]);
+
+    if (commentRows.length > 0) {
+      autoTable(doc, {
+        startY: (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable
+          ?.finalY
+          ? ((doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6)
+          : 120,
+        head: [["Kommentarer (fulltext)", "Punkt", "Text"]],
+        body: commentRows,
+        styles: { fontSize: 8, overflow: "linebreak", cellPadding: 2.2, valign: "top" },
+        headStyles: { fillColor: [15, 23, 42] },
+        columnStyles: {
+          0: { cellWidth: 34 },
+          1: { cellWidth: 56 },
+          2: { cellWidth: 98 }
+        }
+      });
+    }
 
     if (props.parts.length > 0) {
       const replacedParts = props.parts.filter((part) => !part.needs_order);

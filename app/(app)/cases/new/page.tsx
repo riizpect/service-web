@@ -767,7 +767,11 @@ export default function NewCasePage() {
                             <input type="checkbox" className="h-4 w-4" {...register(`checklist_items.${index}.part_replaced`)} />
                             Ersatt del
                           </label>
-                          <Textarea placeholder="Kommentar (valfritt)" {...register(`checklist_items.${index}.comment`)} />
+                          <Textarea
+                            placeholder="Kommentar (valfritt) - skriv fritt, kan vara lång text"
+                            className="min-h-[120px] resize-y"
+                            {...register(`checklist_items.${index}.comment`)}
+                          />
                           <Button
                             type="button"
                             variant="outline"

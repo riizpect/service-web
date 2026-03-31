@@ -283,7 +283,14 @@ export default async function CasePage({ params }: CasePageProps) {
                       key={item.id}
                       className="flex flex-col md:flex-row md:items-center md:justify-between gap-1 rounded-md border px-3 py-2 text-xs md:text-sm"
                     >
-                      <span>{item.item_label}</span>
+                      <div className="space-y-1">
+                        <span>{item.item_label}</span>
+                        {item.comment && (
+                          <p className="text-xs text-muted-foreground whitespace-pre-wrap">
+                            Kommentar: {item.comment}
+                          </p>
+                        )}
+                      </div>
                       <div className="flex items-center gap-2">
                         <Badge
                           variant={
