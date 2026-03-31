@@ -81,7 +81,7 @@ export default function NewCasePage() {
     }
   });
 
-  const { register, watch, handleSubmit, setValue, control } = methods;
+  const { register, watch, handleSubmit, setValue, control, getValues } = methods;
   const currentStep = watch("step") ?? 1;
   const productType = watch("product_type") as ProductType;
   const sections = useMemo(() => getChecklistForProductType(productType), [productType]);
@@ -111,8 +111,11 @@ export default function NewCasePage() {
     (item) => item.status === "AVVIKELSE" || item.status === "EJ_KONTROLLERAD"
   );
 
-  const onSubmit = async (values: ServiceCaseFormValues) => {
-    if (!saving) return;
+  const saveCase = async (
+    values: ServiceCaseFormValues,
+    mode: "draft" | "complete",
+    useFallbacks: boolean
+  ) => {
     setError(null);
     try {
       const supabase = createClientSupabaseBrowser();
@@ -128,18 +131,23 @@ export default function NewCasePage() {
         .from("service_cases")
         .insert({
           created_by: userId,
-          customer_name: values.customer_name,
-          location: values.location,
-          service_date: values.service_date,
-          technician_name: values.technician_name,
+          customer_name: values.customer_name || (useFallbacks ? "Ej ifyllt" : null),
+          location: values.location || (useFallbacks ? "Ej ifyllt" : null),
+          service_date:
+            values.service_date || (useFallbacks ? new Date().toISOString().slice(0, 10) : null),
+          technician_name: values.technician_name || (useFallbacks ? "Ej ifyllt" : null),
           product_type:
             values.product_type === "VIPER_VLS" ? "VIPER + VLS" : values.product_type,
-          viper_serial_number: values.viper_serial_number,
-          vls_serial_number: values.vls_serial_number,
-          reference_number: values.reference_number,
-          final_status: saving === "complete" ? values.final_status : null,
-          final_comment: saving === "complete" ? values.final_comment : null,
-          is_draft: saving === "draft"
+          viper_serial_number: values.viper_serial_number || (useFallbacks ? "Ej ifyllt" : null),
+          vls_serial_number: values.vls_serial_number || (useFallbacks ? "Ej ifyllt" : null),
+          reference_number: values.reference_number || (useFallbacks ? "Ej ifyllt" : null),
+          final_status:
+            mode === "complete" ? values.final_status || (useFallbacks ? "Ej ifyllt" : null) : null,
+          final_comment:
+            mode === "complete"
+              ? values.final_comment || (useFallbacks ? "Ej ifyllt" : null)
+              : null,
+          is_draft: mode === "draft"
         })
         .select("id")
         .single();
@@ -162,9 +170,10 @@ export default function NewCasePage() {
           part_replaced: item.part_replaced
         }))
       );
-      if (values.parts.length > 0) {
+      const partsToSave = values.parts.filter((part) => part.part_name?.trim());
+      if (partsToSave.length > 0) {
         await supabase.from("service_parts").insert(
-          values.parts.map((part) => ({
+          partsToSave.map((part) => ({
             case_id: caseId,
             part_name: part.part_name,
             part_number: part.part_number,
@@ -173,9 +182,10 @@ export default function NewCasePage() {
           }))
         );
       }
-      if (values.photos.length > 0) {
+      const photosToSave = values.photos.filter((photo) => photo.image_url?.trim());
+      if (photosToSave.length > 0) {
         await supabase.from("service_photos").insert(
-          values.photos.map((photo) => ({
+          photosToSave.map((photo) => ({
             case_id: caseId,
             image_url: photo.image_url,
             caption: photo.caption
@@ -190,9 +200,20 @@ export default function NewCasePage() {
     }
   };
 
+  const onSubmit = async (values: ServiceCaseFormValues) => {
+    if (!saving) return;
+    await saveCase(values, saving, false);
+  };
+
   const onInvalidSubmit = () => {
     setSaving(null);
     setError("Formuläret är inte komplett. Kontrollera obligatoriska fält.");
+  };
+
+  const handlePreviewComplete = async () => {
+    setSaving("complete");
+    const values = getValues();
+    await saveCase(values, "complete", true);
   };
 
   const uploadImage = async (file: File, caption: string) => {
@@ -522,6 +543,14 @@ export default function NewCasePage() {
                         }}
                       >
                         {saving === "draft" ? "Sparar..." : "Spara utkast"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={!!saving}
+                        onClick={handlePreviewComplete}
+                      >
+                        {saving === "complete" ? "Skapar..." : "Förhandsvisa färdigt ärende"}
                       </Button>
                       <Button
                         type="button"
