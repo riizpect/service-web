@@ -285,7 +285,13 @@ export default function NewCasePage() {
       arr[Math.floor(Math.random() * arr.length)] as T;
     const now = new Date();
     const yyyyMmDd = now.toISOString().slice(0, 10);
-    const sampleCustomers = ["Karolinska", "Sahlgrenska", "St. Goran", "Aleris", "Region Skane"];
+    const sampleCustomers = [
+      "Ambulansstation Stockholm City",
+      "Ambulansstation Solna",
+      "Ambulansstation Södermalm",
+      "Ambulansstation Göteborg Centrum",
+      "Ambulansstation Malmö Syd"
+    ];
     const sampleLocations = ["Stockholm", "Göteborg", "Malmö", "Uppsala", "Linköping"];
     const okComments = [
       "Visuell kontroll utan anmärkning.",

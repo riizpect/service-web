@@ -42,6 +42,17 @@ interface CaseExportPdfButtonProps {
 export function CaseExportPdfButton(props: CaseExportPdfButtonProps) {
   const handleDownload = () => {
     const doc = new jsPDF();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const ensureSpace = (neededHeight: number): number => {
+      const lastY = (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable
+        ?.finalY ?? 20;
+      const nextY = lastY + 6;
+      if (nextY + neededHeight > pageHeight - 10) {
+        doc.addPage();
+        return 16;
+      }
+      return nextY;
+    };
     const formatChecklistStatus = (status: string) => {
       if (status === "ATGÄRDAD") return "Åtgärdad";
       if (status === "AVVIKELSE") return "Avvikelse";
@@ -173,10 +184,7 @@ export function CaseExportPdfButton(props: CaseExportPdfButtonProps) {
     }
 
     if (requiresReturnVisit) {
-      const revisitY = (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable
-        ?.finalY
-        ? ((doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10)
-        : 230;
+      const revisitY = ensureSpace(22);
       doc.setFontSize(11);
       doc.text("Återbesök", 14, revisitY);
       doc.setFontSize(10);
@@ -187,10 +195,7 @@ export function CaseExportPdfButton(props: CaseExportPdfButtonProps) {
       );
     }
 
-    const verdictY = (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable
-      ?.finalY
-      ? ((doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 14)
-      : 250;
+    const verdictY = ensureSpace(24);
 
     doc.setFontSize(12);
     doc.text("Slutbedömning", 14, verdictY);
