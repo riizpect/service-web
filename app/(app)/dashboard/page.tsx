@@ -54,13 +54,10 @@ export default async function DashboardPage() {
   return (
     <main className="flex-1">
       <div className="space-y-4">
-        <div className="rounded-3xl border border-slate-200/80 bg-white px-5 py-4 shadow-[0_8px_28px_-20px_rgba(15,23,42,0.45)]">
-          <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">Översikt</p>
-          <h1 className="mt-1 text-lg font-semibold text-slate-900">Serviceärenden</h1>
-        </div>
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+          <h1 className="text-lg font-semibold text-slate-900">Serviceärenden</h1>
           <Link href="/cases/new">
-            <Button size="lg">Nytt serviceärende</Button>
+            <Button>Nytt serviceärende</Button>
           </Link>
         </div>
 
@@ -77,7 +74,7 @@ export default async function DashboardPage() {
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {cases.map((c: ServiceCaseRow) => (
               <Link key={c.id} href={`/cases/${c.id}`}>
-                <Card className="h-full border-slate-200 hover:border-primary/40 transition-colors">
+                <Card className="h-full border-slate-200 hover:border-slate-300 transition-colors">
                   <CardHeader className="flex flex-row items-start justify-between gap-2">
                     <div>
                       <CardTitle className="text-base">
