@@ -176,20 +176,20 @@ export default function NewCasePage() {
     setDraftSavedAt(null);
   };
 
-  const fillWithDummyData = () => {
+  const fillWithDummyData = (goToSummary = false) => {
     const randomPick = <T,>(arr: readonly T[]): T =>
       arr[Math.floor(Math.random() * arr.length)] as T;
     const now = new Date();
     const yyyyMmDd = now.toISOString().slice(0, 10);
     const sampleCustomers = ["Karolinska", "Sahlgrenska", "St. Goran", "Aleris", "Region Skane"];
-    const sampleLocations = ["Stockholm", "Goteborg", "Malmo", "Uppsala", "Linkoping"];
+    const sampleLocations = ["Stockholm", "Göteborg", "Malmö", "Uppsala", "Linköping"];
     const sampleTechs = ["Andreas", "Johan", "Erik", "Sara", "Mikael"];
     const sampleComments = [
       "Kontrollerad enligt rutin. Mindre slitage observerat.",
-      "Funktionstest godkant. Rekommenderar ny kontroll inom 3 manader.",
-      "Avvikelse upptackt vid belastningstest, atgard behovs.",
-      "Visuell kontroll utan anmarkning.",
-      "Delvis atgardad pa plats, uppfoljning planerad."
+      "Funktionstest godkänt. Rekommenderar ny kontroll inom 3 månader.",
+      "Avvikelse upptäckt vid belastningstest, åtgärd behövs.",
+      "Visuell kontroll utan anmärkning.",
+      "Delvis åtgärdad på plats, uppföljning planerad."
     ];
 
     const randomizedChecklist = sections.flatMap((section) =>
@@ -213,11 +213,11 @@ export default function NewCasePage() {
         part_name: "Defekt del (ej specificerad)",
         part_number: "",
         quantity: 1,
-        note: "Identifierad under testkornning",
+        note: "Identifierad under testkörning",
         needs_order: true,
         order_status: "Ej beställd" as const,
         priority: randomPick(["Medel", "Hög"] as const),
-        reason: "Avvikelse i checklista - bestalls for aterbesok"
+        reason: "Avvikelse i checklista - beställs för återbesök"
       },
       {
         part_name: "Lassprint",
@@ -249,6 +249,10 @@ export default function NewCasePage() {
     );
     setValue("final_status", randomPick(["Godkänd", "Godkänd med anmärkning", "Ej godkänd"] as const));
     setValue("final_comment", randomPick(sampleComments));
+    if (goToSummary) {
+      setChecklistSectionIndex(sections.length > 0 ? sections.length - 1 : 0);
+      setValue("step", 4);
+    }
     setError("Testdata ifylld. Du kan justera och sedan förhandsvisa/spara.");
   };
 
@@ -531,9 +535,14 @@ export default function NewCasePage() {
           <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">Serviceflöde</p>
           <div className="mt-1 flex items-center justify-between gap-2">
             <h1 className="text-lg font-semibold text-slate-900">Nytt serviceärende</h1>
-            <Button type="button" variant="outline" size="sm" onClick={fillWithDummyData}>
-              Fyll med testdata
-            </Button>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => fillWithDummyData(false)}>
+                Fyll med testdata
+              </Button>
+              <Button type="button" variant="secondary" size="sm" onClick={() => fillWithDummyData(true)}>
+                Testdata till sista steget
+              </Button>
+            </div>
           </div>
           {currentStep >= 2 && (
             <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -574,7 +583,7 @@ export default function NewCasePage() {
         )}
 
         <FormProvider {...methods}>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pb-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pb-6" lang="sv">
             <div ref={formTopRef} />
             {currentStep === 1 && (
               <Card>
