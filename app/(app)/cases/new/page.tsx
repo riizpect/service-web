@@ -110,6 +110,12 @@ export default function NewCasePage() {
   const deviations = watch("checklist_items").filter(
     (item) => item.status === "AVVIKELSE" || item.status === "EJ_KONTROLLERAD"
   );
+  const checklistItems = watch("checklist_items");
+  const checkedCount = checklistItems.filter((item) => item.status === "OK").length;
+  const deviationCount = checklistItems.filter((item) => item.status === "AVVIKELSE").length;
+  const notCheckedCount = checklistItems.filter(
+    (item) => item.status === "EJ_KONTROLLERAD"
+  ).length;
 
   const saveCase = async (
     values: ServiceCaseFormValues,
@@ -259,6 +265,13 @@ export default function NewCasePage() {
         <div className="rounded-3xl border border-slate-200/80 bg-white px-5 py-4 shadow-[0_8px_28px_-20px_rgba(15,23,42,0.45)]">
           <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">Serviceflöde</p>
           <h1 className="mt-1 text-lg font-semibold text-slate-900">Nytt serviceärende</h1>
+          {currentStep >= 2 && (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <Badge variant="success">OK: {checkedCount}</Badge>
+              <Badge variant="danger">Avvikelse: {deviationCount}</Badge>
+              <Badge variant="outline">Ej kontrollerad: {notCheckedCount}</Badge>
+            </div>
+          )}
         </div>
         <div className="h-2 w-full rounded-full bg-muted">
           <div
@@ -280,10 +293,10 @@ export default function NewCasePage() {
                 <CardContent className="space-y-3">
                   <Input placeholder="Kundnamn" {...register("customer_name")} />
                   <Input placeholder="Plats" {...register("location")} />
-                  <div className="grid grid-cols-[150px_minmax(0,1fr)] gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     <Input
                       type="date"
-                      className="h-10 rounded-lg px-2 text-xs"
+                      className="h-10 rounded-lg"
                       {...register("service_date")}
                     />
                     <Input
