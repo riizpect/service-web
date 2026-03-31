@@ -98,6 +98,8 @@ export default function NewCasePage() {
   const { register, watch, handleSubmit, setValue, control, getValues, reset, formState } = methods;
   const currentStep = watch("step") ?? 1;
   const productType = watch("product_type") as ProductType;
+  const showViperFields = productType === "VIPER" || productType === "VIPER_VLS";
+  const showVlsFields = productType === "VLS" || productType === "VIPER_VLS";
   const sections = useMemo(() => getChecklistForProductType(productType), [productType]);
   const currentSection = sections[checklistSectionIndex];
   const isLastChecklistSection = checklistSectionIndex === sections.length - 1;
@@ -518,124 +520,128 @@ export default function NewCasePage() {
                     <option value="VLS">VLS</option>
                     <option value="VIPER_VLS">VIPER + VLS</option>
                   </Select>
-                  <div className="space-y-2">
-                    <Input placeholder="VIPER serienummer" {...register("viper_serial_number")} />
-                    <div className="flex items-center gap-2">
-                      <input
-                        ref={viperSerialInputRef}
-                        type="file"
-                        accept="image/*"
-                        capture="environment"
-                        className="hidden"
-                        onChange={(event) =>
-                          handleImageCapture(
-                            event.target.files?.[0] ?? null,
-                            "SERIAL|VIPER",
-                            "serial-viper"
-                          )
-                        }
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => viperSerialInputRef.current?.click()}
-                        disabled={uploadingTarget === "serial-viper"}
-                      >
-                        <Camera className="mr-1 h-4 w-4" />
-                        {uploadingTarget === "serial-viper"
-                          ? "Laddar upp..."
-                          : "Foto serienummer VIPER"}
-                      </Button>
-                    </div>
-                    {typeof uploadProgressByTarget["serial-viper"] === "number" && (
-                      <p className="text-xs text-muted-foreground">
-                        Uppladdning: {uploadProgressByTarget["serial-viper"]}%
-                      </p>
-                    )}
-                    {viperSerialPhotos.length > 0 && (
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs text-muted-foreground">
-                            Förhandsvisning ({viperSerialPhotos.length})
-                          </p>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => removeLatestPhotoByPrefix("SERIAL|VIPER")}
-                          >
-                            Ta bort bild
-                          </Button>
-                        </div>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={viperSerialPhotos[viperSerialPhotos.length - 1]?.image_url}
-                          alt="VIPER serienummer"
-                          className="h-24 w-full max-w-[200px] rounded-md border object-cover"
+                  {showViperFields && (
+                    <div className="space-y-2">
+                      <Input placeholder="VIPER serienummer" {...register("viper_serial_number")} />
+                      <div className="flex items-center gap-2">
+                        <input
+                          ref={viperSerialInputRef}
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          className="hidden"
+                          onChange={(event) =>
+                            handleImageCapture(
+                              event.target.files?.[0] ?? null,
+                              "SERIAL|VIPER",
+                              "serial-viper"
+                            )
+                          }
                         />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => viperSerialInputRef.current?.click()}
+                          disabled={uploadingTarget === "serial-viper"}
+                        >
+                          <Camera className="mr-1 h-4 w-4" />
+                          {uploadingTarget === "serial-viper"
+                            ? "Laddar upp..."
+                            : "Foto serienummer VIPER"}
+                        </Button>
                       </div>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Input placeholder="VLS serienummer" {...register("vls_serial_number")} />
-                    <div className="flex items-center gap-2">
-                      <input
-                        ref={vlsSerialInputRef}
-                        type="file"
-                        accept="image/*"
-                        capture="environment"
-                        className="hidden"
-                        onChange={(event) =>
-                          handleImageCapture(
-                            event.target.files?.[0] ?? null,
-                            "SERIAL|VLS",
-                            "serial-vls"
-                          )
-                        }
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => vlsSerialInputRef.current?.click()}
-                        disabled={uploadingTarget === "serial-vls"}
-                      >
-                        <Camera className="mr-1 h-4 w-4" />
-                        {uploadingTarget === "serial-vls"
-                          ? "Laddar upp..."
-                          : "Foto serienummer VLS"}
-                      </Button>
-                    </div>
-                    {typeof uploadProgressByTarget["serial-vls"] === "number" && (
-                      <p className="text-xs text-muted-foreground">
-                        Uppladdning: {uploadProgressByTarget["serial-vls"]}%
-                      </p>
-                    )}
-                    {vlsSerialPhotos.length > 0 && (
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs text-muted-foreground">
-                            Förhandsvisning ({vlsSerialPhotos.length})
-                          </p>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => removeLatestPhotoByPrefix("SERIAL|VLS")}
-                          >
-                            Ta bort bild
-                          </Button>
+                      {typeof uploadProgressByTarget["serial-viper"] === "number" && (
+                        <p className="text-xs text-muted-foreground">
+                          Uppladdning: {uploadProgressByTarget["serial-viper"]}%
+                        </p>
+                      )}
+                      {viperSerialPhotos.length > 0 && (
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs text-muted-foreground">
+                              Förhandsvisning ({viperSerialPhotos.length})
+                            </p>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => removeLatestPhotoByPrefix("SERIAL|VIPER")}
+                            >
+                              Ta bort bild
+                            </Button>
+                          </div>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={viperSerialPhotos[viperSerialPhotos.length - 1]?.image_url}
+                            alt="VIPER serienummer"
+                            className="h-24 w-full max-w-[200px] rounded-md border object-cover"
+                          />
                         </div>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={vlsSerialPhotos[vlsSerialPhotos.length - 1]?.image_url}
-                          alt="VLS serienummer"
-                          className="h-24 w-full max-w-[200px] rounded-md border object-cover"
+                      )}
+                    </div>
+                  )}
+                  {showVlsFields && (
+                    <div className="space-y-2">
+                      <Input placeholder="VLS serienummer" {...register("vls_serial_number")} />
+                      <div className="flex items-center gap-2">
+                        <input
+                          ref={vlsSerialInputRef}
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          className="hidden"
+                          onChange={(event) =>
+                            handleImageCapture(
+                              event.target.files?.[0] ?? null,
+                              "SERIAL|VLS",
+                              "serial-vls"
+                            )
+                          }
                         />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => vlsSerialInputRef.current?.click()}
+                          disabled={uploadingTarget === "serial-vls"}
+                        >
+                          <Camera className="mr-1 h-4 w-4" />
+                          {uploadingTarget === "serial-vls"
+                            ? "Laddar upp..."
+                            : "Foto serienummer VLS"}
+                        </Button>
                       </div>
-                    )}
-                  </div>
+                      {typeof uploadProgressByTarget["serial-vls"] === "number" && (
+                        <p className="text-xs text-muted-foreground">
+                          Uppladdning: {uploadProgressByTarget["serial-vls"]}%
+                        </p>
+                      )}
+                      {vlsSerialPhotos.length > 0 && (
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs text-muted-foreground">
+                              Förhandsvisning ({vlsSerialPhotos.length})
+                            </p>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => removeLatestPhotoByPrefix("SERIAL|VLS")}
+                            >
+                              Ta bort bild
+                            </Button>
+                          </div>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={vlsSerialPhotos[vlsSerialPhotos.length - 1]?.image_url}
+                            alt="VLS serienummer"
+                            className="h-24 w-full max-w-[200px] rounded-md border object-cover"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <Input placeholder="Arbetsorder / referensnummer" {...register("reference_number")} />
                 </CardContent>
               </Card>
