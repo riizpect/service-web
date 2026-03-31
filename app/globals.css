@@ -4,6 +4,7 @@
 
 body {
   @apply bg-slate-100 text-foreground antialiased;
+  font-feature-settings: "ss01" on, "cv01" on;
 }
 
 input,
@@ -14,5 +15,9 @@ button {
 
 * {
   -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: rgba(30, 64, 175, 0.2);
 }
 

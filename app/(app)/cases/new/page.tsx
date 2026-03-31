@@ -256,7 +256,10 @@ export default function NewCasePage() {
   return (
     <main className="flex-1">
       <div className="space-y-4">
-        <h1 className="text-lg font-semibold text-slate-900">Nytt serviceärende</h1>
+        <div className="rounded-3xl border border-slate-200/80 bg-white px-5 py-4 shadow-[0_8px_28px_-20px_rgba(15,23,42,0.45)]">
+          <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">Serviceflöde</p>
+          <h1 className="mt-1 text-lg font-semibold text-slate-900">Nytt serviceärende</h1>
+        </div>
         <div className="h-2 w-full rounded-full bg-muted">
           <div
             className="h-2 rounded-full bg-primary transition-all"

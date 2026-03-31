@@ -100,7 +100,9 @@ export default async function CasePage({ params }: CasePageProps) {
   return (
     <main className="flex-1">
       <div className="space-y-4">
-        <div className="flex items-center justify-between gap-2">
+        <div className="rounded-3xl border border-slate-200/80 bg-white px-5 py-4 shadow-[0_8px_28px_-20px_rgba(15,23,42,0.45)]">
+          <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">Serviceärende</p>
+          <div className="mt-1 flex items-center justify-between gap-2">
           <div>
             <h1 className="text-lg font-semibold text-slate-900">
               {serviceCase.customer_name || "Serviceärende"}
@@ -123,6 +125,7 @@ export default async function CasePage({ params }: CasePageProps) {
                 Redigera
               </Button>
             </Link>
+          </div>
           </div>
         </div>
 
