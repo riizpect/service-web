@@ -41,7 +41,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 className={cn(
                   "flex min-w-[86px] flex-col items-center gap-1 rounded-xl px-3 py-2 text-[11px] font-medium transition-colors",
                   active
-                    ? "bg-slate-900 text-white"
+                    ? "bg-primary/10 text-primary"
                     : "text-slate-500 hover:text-slate-900"
                 )}
               >
