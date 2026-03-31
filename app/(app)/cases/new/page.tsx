@@ -183,12 +183,25 @@ export default function NewCasePage() {
     const yyyyMmDd = now.toISOString().slice(0, 10);
     const sampleCustomers = ["Karolinska", "Sahlgrenska", "St. Goran", "Aleris", "Region Skane"];
     const sampleLocations = ["Stockholm", "Göteborg", "Malmö", "Uppsala", "Linköping"];
-    const sampleComments = [
-      "Kontrollerad enligt rutin. Mindre slitage observerat.",
-      "Funktionstest godkänt. Rekommenderar ny kontroll inom 3 månader.",
-      "Avvikelse upptäckt vid belastningstest, åtgärd behövs.",
+    const okComments = [
       "Visuell kontroll utan anmärkning.",
-      "Delvis åtgärdad på plats, uppföljning planerad."
+      "Funktionstest godkänt.",
+      "Kontrollerad enligt rutin."
+    ];
+    const fixedComments = [
+      "Delvis åtgärdad på plats, ny kontroll rekommenderas.",
+      "Komponent justerad och verifierad efter åtgärd.",
+      "Slitage åtgärdat vid servicebesöket."
+    ];
+    const deviationComments = [
+      "Avvikelse upptäckt vid belastningstest, åtgärd behövs.",
+      "Fel upptäckt under funktionskontroll.",
+      "Ej godkänd punkt, kräver uppföljning."
+    ];
+    const notCheckedComments = [
+      "Punkt ej kontrollerad vid detta besök.",
+      "Ej kontrollerad på grund av tidsbrist.",
+      "Behöver följas upp vid återbesök."
     ];
 
     const randomizedChecklist = sections.flatMap((section) =>
@@ -196,38 +209,58 @@ export default function NewCasePage() {
         const roll = Math.random();
         const status: ChecklistStatus =
           roll < 0.65 ? "OK" : roll < 0.8 ? "ATGÄRDAD" : roll < 0.95 ? "AVVIKELSE" : "EJ_KONTROLLERAD";
+        const comment =
+          status === "OK"
+            ? randomPick(okComments)
+            : status === "ATGÄRDAD"
+            ? randomPick(fixedComments)
+            : status === "AVVIKELSE"
+            ? randomPick(deviationComments)
+            : randomPick(notCheckedComments);
+        const partReplaced =
+          status === "ATGÄRDAD" ? Math.random() > 0.35 : false;
         return {
           section_key: section.key,
           item_key: item.key,
           item_label: item.label,
           status,
-          comment: status === "OK" ? "" : randomPick(sampleComments),
-          part_replaced: status === "ATGÄRDAD" ? Math.random() > 0.4 : false
+          comment,
+          part_replaced: partReplaced
         };
       })
     );
+    const deviationItems = randomizedChecklist.filter((item) => item.status === "AVVIKELSE");
+    const notCheckedItems = randomizedChecklist.filter(
+      (item) => item.status === "EJ_KONTROLLERAD"
+    );
+    const fixedItems = randomizedChecklist.filter((item) => item.status === "ATGÄRDAD");
+    const hasSevere = deviationItems.length > 0 || notCheckedItems.length > 1;
+    const hasRemarks = fixedItems.length > 0 || notCheckedItems.length > 0;
 
     const sampleParts = [
-      {
+      ...deviationItems.slice(0, 2).map((item, idx) => ({
         part_name: "Defekt del (ej specificerad)",
         part_number: "",
         quantity: 1,
         note: "Identifierad under testkörning",
         needs_order: true,
         order_status: "Ej beställd" as const,
-        priority: randomPick(["Medel", "Hög"] as const),
-        reason: "Avvikelse i checklista - beställs för återbesök"
-      },
-      {
-        part_name: "Lassprint",
-        part_number: "LP-204",
-        quantity: 1,
-        note: "Bytt pa plats",
-        needs_order: false,
-        order_status: "Monterad" as const,
-        priority: "Låg" as const,
-        reason: ""
-      }
+        priority: idx === 0 ? "Hög" as const : "Medel" as const,
+        reason: `Avvikelse: ${item.item_label}`
+      })),
+      ...fixedItems
+        .filter(() => Math.random() > 0.45)
+        .slice(0, 2)
+        .map((item, idx) => ({
+          part_name: idx === 0 ? "Låssprint" : "Fästdetalj",
+          part_number: idx === 0 ? "LP-204" : "FD-118",
+          quantity: 1,
+          note: `Bytt på plats (${item.item_label})`,
+          needs_order: false,
+          order_status: "Monterad" as const,
+          priority: "Låg" as const,
+          reason: ""
+        }))
     ];
 
     setValue("customer_name", randomPick(sampleCustomers));
@@ -244,10 +277,21 @@ export default function NewCasePage() {
     setValue("checklist_items", randomizedChecklist);
     setValue(
       "parts",
-      sampleParts.filter((part) => part.needs_order || Math.random() > 0.35)
+      sampleParts
     );
-    setValue("final_status", randomPick(["Godkänd", "Godkänd med anmärkning", "Ej godkänd"] as const));
-    setValue("final_comment", randomPick(sampleComments));
+    const finalStatus: ServiceCaseFormValues["final_status"] = hasSevere
+      ? "Ej godkänd"
+      : hasRemarks
+      ? "Godkänd med anmärkning"
+      : "Godkänd";
+    const finalComment =
+      finalStatus === "Godkänd"
+        ? "Samtliga kontroller genomförda utan kritiska anmärkningar."
+        : finalStatus === "Godkänd med anmärkning"
+        ? "Ärendet godkänt med anmärkning. Uppföljning rekommenderas."
+        : "Ärendet ej godkänt. Åtgärd och återbesök krävs.";
+    setValue("final_status", finalStatus);
+    setValue("final_comment", finalComment);
     if (goToSummary) {
       setChecklistSectionIndex(sections.length > 0 ? sections.length - 1 : 0);
       setValue("step", 4);
