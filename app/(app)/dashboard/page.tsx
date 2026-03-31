@@ -5,7 +5,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-async function getCases() {
+type ServiceCaseRow = {
+  id: string;
+  customer_name: string | null;
+  location: string | null;
+  service_date: string | null;
+  technician_name: string | null;
+  product_type: string | null;
+  viper_serial_number: string | null;
+  vls_serial_number: string | null;
+  final_status: string | null;
+  is_draft: boolean | null;
+};
+
+async function getCases(): Promise<ServiceCaseRow[]> {
   const cookieStore = cookies();
   const supabase = createClientSupabaseServer(cookieStore);
 
@@ -19,7 +32,7 @@ async function getCases() {
     return [];
   }
 
-  return data ?? [];
+  return (data ?? []) as ServiceCaseRow[];
 }
 
 function statusVariant(status: string | null): "success" | "warning" | "danger" {
@@ -59,7 +72,7 @@ export default async function DashboardPage() {
           </Card>
         ) : (
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {cases.map((c) => (
+            {cases.map((c: ServiceCaseRow) => (
               <Link key={c.id} href={`/cases/${c.id}`}>
                 <Card className="h-full hover:border-primary/50 transition-colors">
                   <CardHeader className="flex flex-row items-start justify-between gap-2">
