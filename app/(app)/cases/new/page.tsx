@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Camera } from "lucide-react";
 
 const LOCAL_DRAFT_STORAGE_KEY = "service-case-local-draft-v1";
+const LOCAL_SERVER_DRAFT_ID_KEY = "service-case-server-draft-id-v1";
 
 const formSchema = z.object({
   step: z.number().default(1),
@@ -76,12 +77,15 @@ export default function NewCasePage() {
   const [uploadingTarget, setUploadingTarget] = useState<string | null>(null);
   const [uploadProgressByTarget, setUploadProgressByTarget] = useState<Record<string, number>>({});
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
+  const [serverDraftSavedAt, setServerDraftSavedAt] = useState<string | null>(null);
+  const [autoSavingServerDraft, setAutoSavingServerDraft] = useState(false);
   const [pendingLocalDraft, setPendingLocalDraft] = useState<ServiceCaseFormValues | null>(null);
   const viperSerialInputRef = useRef<HTMLInputElement | null>(null);
   const vlsSerialInputRef = useRef<HTMLInputElement | null>(null);
   const formTopRef = useRef<HTMLDivElement | null>(null);
   const saveTimeoutRef = useRef<number | null>(null);
   const restoredDraftRef = useRef(false);
+  const serverDraftCaseIdRef = useRef<string | null>(null);
 
   const methods = useForm<ServiceCaseFormValues>({
     resolver: zodResolver(formSchema),
@@ -129,6 +133,7 @@ export default function NewCasePage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    serverDraftCaseIdRef.current = window.localStorage.getItem(LOCAL_SERVER_DRAFT_ID_KEY);
     const savedDraftRaw = window.localStorage.getItem(LOCAL_DRAFT_STORAGE_KEY);
     if (!savedDraftRaw) return;
     try {
@@ -171,9 +176,108 @@ export default function NewCasePage() {
   const clearSavedDraft = () => {
     if (typeof window !== "undefined") {
       window.localStorage.removeItem(LOCAL_DRAFT_STORAGE_KEY);
+      window.localStorage.removeItem(LOCAL_SERVER_DRAFT_ID_KEY);
     }
     setPendingLocalDraft(null);
     setDraftSavedAt(null);
+    setServerDraftSavedAt(null);
+    serverDraftCaseIdRef.current = null;
+  };
+
+  const upsertServerDraftSnapshot = async (values: ServiceCaseFormValues) => {
+    const supabase = createClientSupabaseBrowser();
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const payload = {
+      created_by: user.id,
+      customer_name: values.customer_name || null,
+      location: values.location || null,
+      service_date: values.service_date || null,
+      technician_name: values.technician_name || null,
+      product_type: values.product_type === "VIPER_VLS" ? "VIPER + VLS" : values.product_type,
+      viper_serial_number: values.viper_serial_number || null,
+      vls_serial_number: values.vls_serial_number || null,
+      reference_number: values.reference_number || null,
+      final_status: null,
+      final_comment: null,
+      is_draft: true
+    };
+
+    let caseId = serverDraftCaseIdRef.current;
+    if (caseId) {
+      const { error: updateError } = await supabase
+        .from("service_cases")
+        .update(payload)
+        .eq("id", caseId)
+        .eq("created_by", user.id);
+      if (updateError) {
+        caseId = null;
+      }
+    }
+
+    if (!caseId) {
+      const { data: createdCase, error: createError } = await supabase
+        .from("service_cases")
+        .insert(payload)
+        .select("id")
+        .single();
+      if (createError || !createdCase) return;
+      const createdCaseId = createdCase.id;
+      caseId = createdCaseId;
+      serverDraftCaseIdRef.current = createdCaseId;
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(LOCAL_SERVER_DRAFT_ID_KEY, createdCaseId);
+      }
+    }
+
+    const checklistPayload = values.checklist_items.map((item) => ({
+      case_id: caseId,
+      section_key: item.section_key,
+      item_key: item.item_key,
+      item_label: item.item_label,
+      item_status: item.status,
+      comment: item.comment,
+      part_replaced: item.part_replaced
+    }));
+    const partsPayload = values.parts
+      .filter((part) => Boolean(part.needs_order) || Boolean(part.part_name?.trim()))
+      .map((part) => ({
+        case_id: caseId,
+        part_name: part.part_name?.trim() || "Defekt del (ej specificerad)",
+        part_number: part.part_number,
+        quantity: part.quantity,
+        note: part.note,
+        needs_order: part.needs_order,
+        order_status: part.order_status,
+        priority: part.priority,
+        reason: part.reason
+      }));
+    const photosPayload = values.photos
+      .filter((photo) => photo.image_url?.trim())
+      .map((photo) => ({
+        case_id: caseId,
+        image_url: photo.image_url,
+        caption: photo.caption
+      }));
+
+    await supabase.from("service_checklist_items").delete().eq("case_id", caseId);
+    if (checklistPayload.length > 0) {
+      await supabase.from("service_checklist_items").insert(checklistPayload);
+    }
+
+    await supabase.from("service_parts").delete().eq("case_id", caseId);
+    if (partsPayload.length > 0) {
+      await supabase.from("service_parts").insert(partsPayload);
+    }
+
+    await supabase.from("service_photos").delete().eq("case_id", caseId);
+    if (photosPayload.length > 0) {
+      await supabase.from("service_photos").insert(photosPayload);
+    }
+    setServerDraftSavedAt(new Date().toISOString());
   };
 
   const fillWithDummyData = (goToSummary = false) => {
@@ -305,6 +409,19 @@ export default function NewCasePage() {
     }
   }, [checklistSectionIndex, currentStep]);
 
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      if (!formState.isDirty || saving || autoSavingServerDraft) return;
+      const values = getValues();
+      setAutoSavingServerDraft(true);
+      void upsertServerDraftSnapshot(values).finally(() => {
+        setAutoSavingServerDraft(false);
+      });
+    }, 60_000);
+
+    return () => window.clearInterval(intervalId);
+  }, [formState.isDirty, saving, autoSavingServerDraft, getValues]);
+
   const deviations = watch("checklist_items").filter(
     (item) => item.status === "AVVIKELSE" || item.status === "EJ_KONTROLLERAD"
   );
@@ -435,7 +552,9 @@ export default function NewCasePage() {
 
       if (typeof window !== "undefined") {
         window.localStorage.removeItem(LOCAL_DRAFT_STORAGE_KEY);
+        window.localStorage.removeItem(LOCAL_SERVER_DRAFT_ID_KEY);
       }
+      serverDraftCaseIdRef.current = null;
       router.push(`/cases/${caseId}`);
     } catch {
       setError("Något gick fel vid sparning. Försök igen.");
@@ -1034,7 +1153,17 @@ export default function NewCasePage() {
             {error && <p className="text-sm text-red-600">{error}</p>}
             {draftSavedAt && (
               <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                <p>Autosparat lokalt: {new Date(draftSavedAt).toLocaleTimeString("sv-SE")}</p>
+                <div className="flex flex-col gap-0.5">
+                  <p>Autosparat lokalt: {new Date(draftSavedAt).toLocaleTimeString("sv-SE")}</p>
+                  <p>
+                    Autosparat till server:{" "}
+                    {serverDraftSavedAt
+                      ? new Date(serverDraftSavedAt).toLocaleTimeString("sv-SE")
+                      : autoSavingServerDraft
+                      ? "sparar..."
+                      : "inte ännu"}
+                  </p>
+                </div>
                 <Button type="button" variant="ghost" size="sm" onClick={clearSavedDraft}>
                   Ta bort lokalt utkast
                 </Button>
