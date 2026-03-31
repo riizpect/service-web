@@ -277,7 +277,7 @@ export default function NewCasePage() {
                 <CardContent className="space-y-3">
                   <Input placeholder="Kundnamn" {...register("customer_name")} />
                   <Input placeholder="Plats" {...register("location")} />
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                     <Input type="date" {...register("service_date")} />
                     <Input placeholder="Servicetekniker" {...register("technician_name")} />
                   </div>
