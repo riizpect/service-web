@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { CaseExportPdfButton } from "@/components/case-export-pdf-button";
+import { ConfirmDeleteCaseForm } from "@/components/confirm-delete-case-form";
 import { getSectionTitleByKey } from "@/lib/checklistConfig";
 
 interface CasePageProps {
@@ -163,11 +164,7 @@ export default async function CasePage({ params }: CasePageProps) {
                 Redigera
               </Button>
             </Link>
-            <form action={deleteCase}>
-              <Button type="submit" variant="destructive" size="sm">
-                Ta bort
-              </Button>
-            </form>
+            <ConfirmDeleteCaseForm action={deleteCase} />
           </div>
           </div>
         </div>
