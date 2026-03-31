@@ -336,6 +336,17 @@ export default function NewCasePage() {
     await saveCase(values, "complete", true);
   };
 
+  const removeLatestPhotoByPrefix = (captionPrefix: string) => {
+    const allPhotos = getValues("photos");
+    const indexToRemove = [...allPhotos]
+      .map((photo, index) => ({ photo, index }))
+      .reverse()
+      .find(({ photo }) => (photo.caption ?? "").startsWith(captionPrefix))?.index;
+    if (typeof indexToRemove === "number") {
+      photosArray.remove(indexToRemove);
+    }
+  };
+
   const uploadImage = async (file: File, caption: string, target: string) => {
     const supabase = createClientSupabaseBrowser();
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -510,9 +521,19 @@ export default function NewCasePage() {
                     )}
                     {viperSerialPhotos.length > 0 && (
                       <div className="space-y-1">
-                        <p className="text-xs text-muted-foreground">
-                          Förhandsvisning ({viperSerialPhotos.length})
-                        </p>
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-muted-foreground">
+                            Förhandsvisning ({viperSerialPhotos.length})
+                          </p>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => removeLatestPhotoByPrefix("SERIAL|VIPER")}
+                          >
+                            Ta bort bild
+                          </Button>
+                        </div>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={viperSerialPhotos[viperSerialPhotos.length - 1]?.image_url}
@@ -559,9 +580,19 @@ export default function NewCasePage() {
                     )}
                     {vlsSerialPhotos.length > 0 && (
                       <div className="space-y-1">
-                        <p className="text-xs text-muted-foreground">
-                          Förhandsvisning ({vlsSerialPhotos.length})
-                        </p>
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-muted-foreground">
+                            Förhandsvisning ({vlsSerialPhotos.length})
+                          </p>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => removeLatestPhotoByPrefix("SERIAL|VLS")}
+                          >
+                            Ta bort bild
+                          </Button>
+                        </div>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={vlsSerialPhotos[vlsSerialPhotos.length - 1]?.image_url}
@@ -647,9 +678,23 @@ export default function NewCasePage() {
                           )}
                           {itemPhotos.length > 0 && (
                             <div className="space-y-1">
-                              <p className="text-xs text-muted-foreground">
-                                Förhandsvisning ({itemPhotos.length})
-                              </p>
+                              <div className="flex items-center justify-between">
+                                <p className="text-xs text-muted-foreground">
+                                  Förhandsvisning ({itemPhotos.length})
+                                </p>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() =>
+                                    removeLatestPhotoByPrefix(
+                                      `ITEM|${field.section_key}|${field.item_key}|`
+                                    )
+                                  }
+                                >
+                                  Ta bort bild
+                                </Button>
+                              </div>
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img
                                 src={itemPhotos[itemPhotos.length - 1]?.image_url}
