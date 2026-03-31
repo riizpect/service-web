@@ -52,9 +52,10 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex flex-1 items-center justify-center px-4 py-8">
-      <Card className="w-full max-w-md">
+    <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-8">
+      <Card className="w-full max-w-md border-slate-200">
         <CardHeader>
+          <p className="text-xs uppercase tracking-wide text-slate-500">Ferno Service</p>
           <CardTitle>Logga in</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">

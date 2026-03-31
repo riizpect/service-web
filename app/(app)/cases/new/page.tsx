@@ -255,7 +255,7 @@ export default function NewCasePage() {
 
   return (
     <main className="flex-1">
-      <div className="container py-4 space-y-4">
+      <div className="space-y-4">
         <h1 className="text-xl font-semibold">Nytt serviceärende</h1>
         <div className="h-2 w-full rounded-full bg-muted">
           <div

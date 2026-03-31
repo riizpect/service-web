@@ -3,12 +3,16 @@
 @tailwind utilities;
 
 body {
-  @apply bg-background text-foreground;
+  @apply bg-slate-100 text-foreground antialiased;
 }
 
 input,
 textarea,
 button {
   @apply outline-none;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
 }
 

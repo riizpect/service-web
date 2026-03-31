@@ -53,9 +53,12 @@ export default async function DashboardPage() {
 
   return (
     <main className="flex-1">
-      <div className="container py-4 space-y-4">
-        <div className="flex items-center justify-between gap-2">
+      <div className="space-y-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+          <p className="text-xs uppercase tracking-wide text-slate-500">Översikt</p>
           <h1 className="text-xl font-semibold">Serviceärenden</h1>
+        </div>
+        <div className="flex items-center justify-between gap-2">
           <Link href="/cases/new">
             <Button size="lg">Nytt serviceärende</Button>
           </Link>
@@ -74,7 +77,7 @@ export default async function DashboardPage() {
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {cases.map((c: ServiceCaseRow) => (
               <Link key={c.id} href={`/cases/${c.id}`}>
-                <Card className="h-full hover:border-primary/50 transition-colors">
+                <Card className="h-full border-slate-200 hover:border-primary/40 transition-colors">
                   <CardHeader className="flex flex-row items-start justify-between gap-2">
                     <div>
                       <CardTitle className="text-base">
