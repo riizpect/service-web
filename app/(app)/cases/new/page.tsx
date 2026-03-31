@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Camera } from "lucide-react";
+import { BlankChecklistPdfButton } from "@/components/blank-checklist-pdf-button";
 
 const LOCAL_DRAFT_STORAGE_KEY = "service-case-local-draft-v1";
 const LOCAL_SERVER_DRAFT_ID_KEY = "service-case-server-draft-id-v1";
@@ -710,6 +711,7 @@ export default function NewCasePage() {
               <Button type="button" variant="secondary" size="sm" onClick={() => fillWithDummyData(true)}>
                 Testdata till sista steget
               </Button>
+              <BlankChecklistPdfButton productType={productType} />
             </div>
           </div>
           {currentStep >= 2 && (
