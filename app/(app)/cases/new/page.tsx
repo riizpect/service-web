@@ -280,9 +280,17 @@ export default function NewCasePage() {
                 <CardContent className="space-y-3">
                   <Input placeholder="Kundnamn" {...register("customer_name")} />
                   <Input placeholder="Plats" {...register("location")} />
-                  <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                    <Input type="date" {...register("service_date")} />
-                    <Input placeholder="Servicetekniker" {...register("technician_name")} />
+                  <div className="grid grid-cols-[150px_minmax(0,1fr)] gap-2">
+                    <Input
+                      type="date"
+                      className="h-10 rounded-lg px-2 text-xs"
+                      {...register("service_date")}
+                    />
+                    <Input
+                      placeholder="Servicetekniker"
+                      className="h-10 min-w-0 rounded-lg"
+                      {...register("technician_name")}
+                    />
                   </div>
                   <Select value={productType} onChange={(e) => setValue("product_type", e.target.value as ProductType)}>
                     <option value="VIPER">VIPER</option>
