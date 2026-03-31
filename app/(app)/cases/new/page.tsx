@@ -76,6 +76,7 @@ export default function NewCasePage() {
   const [uploadingTarget, setUploadingTarget] = useState<string | null>(null);
   const [uploadProgressByTarget, setUploadProgressByTarget] = useState<Record<string, number>>({});
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
+  const [pendingLocalDraft, setPendingLocalDraft] = useState<ServiceCaseFormValues | null>(null);
   const viperSerialInputRef = useRef<HTMLInputElement | null>(null);
   const vlsSerialInputRef = useRef<HTMLInputElement | null>(null);
   const formTopRef = useRef<HTMLDivElement | null>(null);
@@ -94,7 +95,7 @@ export default function NewCasePage() {
     }
   });
 
-  const { register, watch, handleSubmit, setValue, control, getValues, reset } = methods;
+  const { register, watch, handleSubmit, setValue, control, getValues, reset, formState } = methods;
   const currentStep = watch("step") ?? 1;
   const productType = watch("product_type") as ProductType;
   const sections = useMemo(() => getChecklistForProductType(productType), [productType]);
@@ -130,18 +131,16 @@ export default function NewCasePage() {
     if (!savedDraftRaw) return;
     try {
       const parsed = JSON.parse(savedDraftRaw) as ServiceCaseFormValues;
-      restoredDraftRef.current = Boolean(parsed.checklist_items?.length);
-      reset(parsed);
-      setChecklistSectionIndex(0);
-      setError("Lokalt utkast återställt.");
+      setPendingLocalDraft(parsed);
     } catch {
       window.localStorage.removeItem(LOCAL_DRAFT_STORAGE_KEY);
     }
-  }, [reset]);
+  }, []);
 
   useEffect(() => {
     const subscription = watch((value) => {
       if (typeof window === "undefined") return;
+      if (!formState.isDirty) return;
       if (saveTimeoutRef.current) {
         window.clearTimeout(saveTimeoutRef.current);
       }
@@ -156,7 +155,24 @@ export default function NewCasePage() {
         window.clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [watch]);
+  }, [watch, formState.isDirty]);
+
+  const resumeSavedDraft = () => {
+    if (!pendingLocalDraft) return;
+    restoredDraftRef.current = Boolean(pendingLocalDraft.checklist_items?.length);
+    reset(pendingLocalDraft);
+    setChecklistSectionIndex(0);
+    setPendingLocalDraft(null);
+    setError("Lokalt utkast återställt.");
+  };
+
+  const clearSavedDraft = () => {
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(LOCAL_DRAFT_STORAGE_KEY);
+    }
+    setPendingLocalDraft(null);
+    setDraftSavedAt(null);
+  };
 
   useEffect(() => {
     if (currentStep === 2) {
@@ -457,6 +473,24 @@ export default function NewCasePage() {
             }}
           />
         </div>
+
+        {pendingLocalDraft && (
+          <Card>
+            <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm">
+                Du har ett tidigare lokalt utkast. Vill du återuppta det?
+              </p>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" onClick={clearSavedDraft}>
+                  Börja nytt
+                </Button>
+                <Button type="button" onClick={resumeSavedDraft}>
+                  Återuppta utkast
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <FormProvider {...methods}>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pb-6">
@@ -858,9 +892,12 @@ export default function NewCasePage() {
 
             {error && <p className="text-sm text-red-600">{error}</p>}
             {draftSavedAt && (
-              <p className="text-xs text-muted-foreground">
-                Autosparat lokalt: {new Date(draftSavedAt).toLocaleTimeString("sv-SE")}
-              </p>
+              <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                <p>Autosparat lokalt: {new Date(draftSavedAt).toLocaleTimeString("sv-SE")}</p>
+                <Button type="button" variant="ghost" size="sm" onClick={clearSavedDraft}>
+                  Ta bort lokalt utkast
+                </Button>
+              </div>
             )}
 
             <div className="sticky bottom-16 z-30 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-sm backdrop-blur md:bottom-4">
