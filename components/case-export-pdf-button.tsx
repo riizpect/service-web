@@ -42,17 +42,6 @@ interface CaseExportPdfButtonProps {
 export function CaseExportPdfButton(props: CaseExportPdfButtonProps) {
   const handleDownload = () => {
     const doc = new jsPDF();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const ensureSpace = (neededHeight: number): number => {
-      const lastY = (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable
-        ?.finalY ?? 20;
-      const nextY = lastY + 6;
-      if (nextY + neededHeight > pageHeight - 10) {
-        doc.addPage();
-        return 16;
-      }
-      return nextY;
-    };
     const formatChecklistStatus = (status: string) => {
       if (status === "ATGÄRDAD") return "Åtgärdad";
       if (status === "AVVIKELSE") return "Avvikelse";
@@ -184,25 +173,42 @@ export function CaseExportPdfButton(props: CaseExportPdfButtonProps) {
     }
 
     if (requiresReturnVisit) {
-      const revisitY = ensureSpace(22);
-      doc.setFontSize(11);
-      doc.text("Återbesök", 14, revisitY);
-      doc.setFontSize(10);
-      doc.text(
-        `Återbesök krävs för ${orderParts.length} reservdel(ar) som behöver beställas/monteras.`,
-        14,
-        revisitY + 6
-      );
+      autoTable(doc, {
+        startY: (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable
+          ?.finalY
+          ? ((doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6)
+          : 230,
+        head: [["Återbesök", "Info"]],
+        body: [[
+          "Status",
+          `Återbesök krävs för ${orderParts.length} reservdel(ar) som behöver beställas/monteras.`
+        ]],
+        styles: { fontSize: 9, overflow: "linebreak", cellPadding: 2.2, valign: "top" },
+        headStyles: { fillColor: [217, 119, 6] },
+        columnStyles: {
+          0: { cellWidth: 34 },
+          1: { cellWidth: 154 }
+        }
+      });
     }
 
-    const verdictY = ensureSpace(24);
-
-    doc.setFontSize(12);
-    doc.text("Slutbedömning", 14, verdictY);
-    doc.setFontSize(11);
-    doc.text(`Status: ${normalizedFinalStatus}`, 14, verdictY + 8);
-    doc.setFontSize(10);
-    doc.text(`Bedömning: ${verdictLabel}`, 14, verdictY + 14);
+    autoTable(doc, {
+      startY: (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable
+        ?.finalY
+        ? ((doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6)
+        : 245,
+      head: [["Slutbedömning", "Värde"]],
+      body: [
+        ["Status", normalizedFinalStatus],
+        ["Bedömning", verdictLabel]
+      ],
+      styles: { fontSize: 9, overflow: "linebreak", cellPadding: 2.2, valign: "top" },
+      headStyles: { fillColor: [15, 23, 42] },
+      columnStyles: {
+        0: { cellWidth: 34 },
+        1: { cellWidth: 154 }
+      }
+    });
 
     const safeCustomer = (props.customerName ?? "kund").replace(/\s+/g, "-");
     const safeDate = props.serviceDate ?? "datum";
