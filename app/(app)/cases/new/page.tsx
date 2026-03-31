@@ -269,10 +269,8 @@ export default function NewCasePage() {
         .update({ requires_return_visit: requiresReturnVisit })
         .eq("id", caseId);
       if (caseFlagError) {
-        await supabase.from("service_cases").delete().eq("id", caseId);
-        setError("Kunde inte sätta återbesök-status. Ärendet sparades inte.");
-        setSaving(null);
-        return;
+        // Non-blocking: case must still be saved even if optional flag update fails.
+        console.warn("Could not set requires_return_visit", caseFlagError.message);
       }
       if (partsToSave.length > 0) {
         const { error: partsError } = await supabase.from("service_parts").insert(

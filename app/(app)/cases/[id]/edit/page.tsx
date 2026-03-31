@@ -202,8 +202,7 @@ export default function EditCasePage({ params }: { params: { id: string } }) {
         reference_number: form.reference_number,
         final_status: form.final_status,
         final_comment: form.final_comment,
-        is_draft: form.is_draft,
-        requires_return_visit: requiresReturnVisit
+        is_draft: form.is_draft
       })
       .eq("id", params.id);
 
@@ -211,6 +210,14 @@ export default function EditCasePage({ params }: { params: { id: string } }) {
       setError("Kunde inte spara ändringar.");
       setSaving(false);
       return;
+    }
+
+    const { error: returnVisitError } = await supabase
+      .from("service_cases")
+      .update({ requires_return_visit: requiresReturnVisit })
+      .eq("id", params.id);
+    if (returnVisitError) {
+      console.warn("Could not set requires_return_visit", returnVisitError.message);
     }
 
     await supabase.from("service_checklist_items").delete().eq("case_id", params.id);
