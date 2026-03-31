@@ -48,6 +48,8 @@ export function CaseExportPdfButton(props: CaseExportPdfButtonProps) {
       if (status === "EJ_KONTROLLERAD") return "Ej kontrollerad";
       return status;
     };
+    const orderParts = props.parts.filter((part) => part.needs_order);
+    const requiresReturnVisit = orderParts.length > 0;
     const normalizedFinalStatus = props.finalStatus ?? "Ej ifyllt";
     const verdictLabel =
       normalizedFinalStatus === "Godkänd"
@@ -75,6 +77,7 @@ export function CaseExportPdfButton(props: CaseExportPdfButtonProps) {
         ["VIPER serienummer", props.viperSerial ?? "-"],
         ["VLS serienummer", props.vlsSerial ?? "-"],
         ["Referensnummer", props.referenceNumber ?? "-"],
+        ["Återbesök krävs", requiresReturnVisit ? "Ja" : "Nej"],
         ["Slutstatus", normalizedFinalStatus],
         ["Slutkommentar", props.finalComment ?? "-"]
       ],
@@ -133,7 +136,6 @@ export function CaseExportPdfButton(props: CaseExportPdfButtonProps) {
 
     if (props.parts.length > 0) {
       const replacedParts = props.parts.filter((part) => !part.needs_order);
-      const orderParts = props.parts.filter((part) => part.needs_order);
 
       if (replacedParts.length > 0) {
         autoTable(doc, {
@@ -172,6 +174,21 @@ export function CaseExportPdfButton(props: CaseExportPdfButtonProps) {
           styles: { fontSize: 8 }
         });
       }
+    }
+
+    if (requiresReturnVisit) {
+      const revisitY = (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable
+        ?.finalY
+        ? ((doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10)
+        : 230;
+      doc.setFontSize(11);
+      doc.text("Återbesök", 14, revisitY);
+      doc.setFontSize(10);
+      doc.text(
+        `Återbesök krävs för ${orderParts.length} reservdel(ar) som behöver beställas/monteras.`,
+        14,
+        revisitY + 6
+      );
     }
 
     const verdictY = (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable
