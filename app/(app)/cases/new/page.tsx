@@ -172,7 +172,7 @@ export default function NewCasePage() {
       }
 
       const caseId = caseData.id;
-      await supabase.from("service_checklist_items").insert(
+      const { error: checklistError } = await supabase.from("service_checklist_items").insert(
         values.checklist_items.map((item) => ({
           case_id: caseId,
           section_key: item.section_key,
@@ -183,9 +183,15 @@ export default function NewCasePage() {
           part_replaced: item.part_replaced
         }))
       );
+      if (checklistError) {
+        await supabase.from("service_cases").delete().eq("id", caseId);
+        setError("Kunde inte spara checklista. Ärendet sparades inte.");
+        setSaving(null);
+        return;
+      }
       const partsToSave = values.parts.filter((part) => part.part_name?.trim());
       if (partsToSave.length > 0) {
-        await supabase.from("service_parts").insert(
+        const { error: partsError } = await supabase.from("service_parts").insert(
           partsToSave.map((part) => ({
             case_id: caseId,
             part_name: part.part_name,
@@ -194,16 +200,28 @@ export default function NewCasePage() {
             note: part.note
           }))
         );
+        if (partsError) {
+          await supabase.from("service_cases").delete().eq("id", caseId);
+          setError("Kunde inte spara ersatta delar. Ärendet sparades inte.");
+          setSaving(null);
+          return;
+        }
       }
       const photosToSave = values.photos.filter((photo) => photo.image_url?.trim());
       if (photosToSave.length > 0) {
-        await supabase.from("service_photos").insert(
+        const { error: photosError } = await supabase.from("service_photos").insert(
           photosToSave.map((photo) => ({
             case_id: caseId,
             image_url: photo.image_url,
             caption: photo.caption
           }))
         );
+        if (photosError) {
+          await supabase.from("service_cases").delete().eq("id", caseId);
+          setError("Kunde inte spara bilder. Ärendet sparades inte.");
+          setSaving(null);
+          return;
+        }
       }
 
       router.push(`/cases/${caseId}`);

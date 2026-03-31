@@ -39,11 +39,16 @@ type ServicePhotoRow = {
 export default async function CasePage({ params }: CasePageProps) {
   const cookieStore = cookies();
   const supabase = createClientSupabaseServer(cookieStore);
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+  if (!user) notFound();
 
   const { data: serviceCase } = await supabase
     .from("service_cases")
     .select("*")
     .eq("id", params.id)
+    .eq("created_by", user.id)
     .single();
 
   if (!serviceCase) notFound();

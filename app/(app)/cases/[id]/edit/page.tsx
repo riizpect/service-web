@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClientSupabaseBrowser } from "@/lib/supabaseClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { getChecklistForProductType, type ChecklistStatus, type ProductType } from "@/lib/checklistConfig";
 
 type EditableCase = {
   id: string;
@@ -22,6 +23,31 @@ type EditableCase = {
   final_status: string | null;
   final_comment: string | null;
   is_draft: boolean | null;
+  created_by: string | null;
+};
+
+type EditableChecklistItem = {
+  id: string;
+  section_key: string;
+  item_key: string;
+  item_label: string;
+  item_status: ChecklistStatus;
+  comment: string | null;
+  part_replaced: boolean | null;
+};
+
+type EditablePart = {
+  id: string;
+  part_name: string;
+  part_number: string | null;
+  quantity: number;
+  note: string | null;
+};
+
+type EditablePhoto = {
+  id: string;
+  image_url: string;
+  caption: string | null;
 };
 
 export default function EditCasePage({ params }: { params: { id: string } }) {
@@ -30,25 +56,100 @@ export default function EditCasePage({ params }: { params: { id: string } }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<EditableCase | null>(null);
+  const [checklist, setChecklist] = useState<EditableChecklistItem[]>([]);
+  const [parts, setParts] = useState<EditablePart[]>([]);
+  const [photos, setPhotos] = useState<EditablePhoto[]>([]);
 
   useEffect(() => {
     const load = async () => {
       const supabase = createClientSupabaseBrowser();
+      const {
+        data: { user }
+      } = await supabase.auth.getUser();
+
       const { data, error: loadError } = await supabase
         .from("service_cases")
         .select("*")
         .eq("id", params.id)
+        .eq("created_by", user?.id ?? "")
         .single();
 
       if (loadError || !data) {
         setError("Kunde inte läsa ärendet.");
       } else {
-        setForm(data as EditableCase);
+        const loadedCase = data as EditableCase;
+        setForm(loadedCase);
+
+        const normalizedProductType: ProductType =
+          loadedCase.product_type === "VIPER + VLS"
+            ? "VIPER_VLS"
+            : (loadedCase.product_type as ProductType);
+
+        const expectedItems = getChecklistForProductType(normalizedProductType).flatMap(
+          (section) =>
+            section.items.map((item) => ({
+              id: `${section.key}-${item.key}`,
+              section_key: section.key,
+              item_key: item.key,
+              item_label: item.label,
+              item_status: "EJ_KONTROLLERAD" as ChecklistStatus,
+              comment: "",
+              part_replaced: false
+            }))
+        );
+
+        const { data: checklistData } = await supabase
+          .from("service_checklist_items")
+          .select("*")
+          .eq("case_id", params.id);
+        const checklistMap = new Map(
+          (checklistData ?? []).map((item) => [
+            `${item.section_key}-${item.item_key}`,
+            item
+          ])
+        );
+        setChecklist(
+          expectedItems.map((item) => {
+            const saved = checklistMap.get(`${item.section_key}-${item.item_key}`);
+            return saved
+              ? {
+                  id: saved.id,
+                  section_key: saved.section_key,
+                  item_key: saved.item_key,
+                  item_label: saved.item_label,
+                  item_status: saved.item_status as ChecklistStatus,
+                  comment: saved.comment,
+                  part_replaced: saved.part_replaced
+                }
+              : item;
+          })
+        );
+
+        const { data: partsData } = await supabase
+          .from("service_parts")
+          .select("*")
+          .eq("case_id", params.id);
+        setParts((partsData ?? []) as EditablePart[]);
+
+        const { data: photosData } = await supabase
+          .from("service_photos")
+          .select("*")
+          .eq("case_id", params.id);
+        setPhotos((photosData ?? []) as EditablePhoto[]);
       }
       setLoading(false);
     };
     void load();
   }, [params.id]);
+
+  const sections = useMemo(() => {
+    if (!form?.product_type) return [];
+    const type =
+      form.product_type === "VIPER + VLS"
+        ? "VIPER_VLS"
+        : (form.product_type as ProductType);
+    return getChecklistForProductType(type);
+  }, [form?.product_type]);
 
   const save = async () => {
     if (!form) return;
@@ -76,6 +177,47 @@ export default function EditCasePage({ params }: { params: { id: string } }) {
       setError("Kunde inte spara ändringar.");
       setSaving(false);
       return;
+    }
+
+    await supabase.from("service_checklist_items").delete().eq("case_id", params.id);
+    if (checklist.length > 0) {
+      await supabase.from("service_checklist_items").insert(
+        checklist.map((item) => ({
+          case_id: params.id,
+          section_key: item.section_key,
+          item_key: item.item_key,
+          item_label: item.item_label,
+          item_status: item.item_status,
+          comment: item.comment,
+          part_replaced: item.part_replaced
+        }))
+      );
+    }
+
+    await supabase.from("service_parts").delete().eq("case_id", params.id);
+    const validParts = parts.filter((part) => part.part_name?.trim());
+    if (validParts.length > 0) {
+      await supabase.from("service_parts").insert(
+        validParts.map((part) => ({
+          case_id: params.id,
+          part_name: part.part_name,
+          part_number: part.part_number,
+          quantity: part.quantity,
+          note: part.note
+        }))
+      );
+    }
+
+    await supabase.from("service_photos").delete().eq("case_id", params.id);
+    const validPhotos = photos.filter((photo) => photo.image_url?.trim());
+    if (validPhotos.length > 0) {
+      await supabase.from("service_photos").insert(
+        validPhotos.map((photo) => ({
+          case_id: params.id,
+          image_url: photo.image_url,
+          caption: photo.caption
+        }))
+      );
     }
 
     router.push(`/cases/${params.id}`);
@@ -203,6 +345,236 @@ export default function EditCasePage({ params }: { params: { id: string } }) {
               />
               Markera som utkast
             </label>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Checklista</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {sections.map((section) => (
+              <div key={section.key} className="space-y-2">
+                <p className="text-sm font-semibold">{section.title}</p>
+                {checklist
+                  .filter((item) => item.section_key === section.key)
+                  .map((item) => (
+                    <div key={`${item.section_key}-${item.item_key}`} className="rounded-md border p-3 space-y-2">
+                      <p className="text-sm">{item.item_label}</p>
+                      <Select
+                        value={item.item_status}
+                        onChange={(event) =>
+                          setChecklist((prev) =>
+                            prev.map((existing) =>
+                              existing.section_key === item.section_key &&
+                              existing.item_key === item.item_key
+                                ? {
+                                    ...existing,
+                                    item_status: event.target.value as ChecklistStatus
+                                  }
+                                : existing
+                            )
+                          )
+                        }
+                      >
+                        <option value="OK">OK</option>
+                        <option value="ATGÄRDAD">Åtgärdad</option>
+                        <option value="AVVIKELSE">Avvikelse</option>
+                        <option value="EJ_KONTROLLERAD">Ej kontrollerad</option>
+                      </Select>
+                      <Textarea
+                        placeholder="Kommentar"
+                        value={item.comment ?? ""}
+                        onChange={(event) =>
+                          setChecklist((prev) =>
+                            prev.map((existing) =>
+                              existing.section_key === item.section_key &&
+                              existing.item_key === item.item_key
+                                ? { ...existing, comment: event.target.value }
+                                : existing
+                            )
+                          )
+                        }
+                      />
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(item.part_replaced)}
+                          onChange={(event) =>
+                            setChecklist((prev) =>
+                              prev.map((existing) =>
+                                existing.section_key === item.section_key &&
+                                existing.item_key === item.item_key
+                                  ? {
+                                      ...existing,
+                                      part_replaced: event.target.checked
+                                    }
+                                  : existing
+                              )
+                            )
+                          }
+                        />
+                        Ersatt del
+                      </label>
+                    </div>
+                  ))}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Ersatta delar</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() =>
+                setParts((prev) => [
+                  ...prev,
+                  {
+                    id: `new-${Date.now()}`,
+                    part_name: "",
+                    part_number: "",
+                    quantity: 1,
+                    note: ""
+                  }
+                ])
+              }
+            >
+              Lägg till del
+            </Button>
+            {parts.map((part, index) => (
+              <div key={part.id} className="rounded-md border p-3 space-y-2">
+                <Input
+                  placeholder="Delnamn"
+                  value={part.part_name}
+                  onChange={(event) =>
+                    setParts((prev) =>
+                      prev.map((existing, partIndex) =>
+                        partIndex === index
+                          ? { ...existing, part_name: event.target.value }
+                          : existing
+                      )
+                    )
+                  }
+                />
+                <Input
+                  placeholder="Artikelnummer"
+                  value={part.part_number ?? ""}
+                  onChange={(event) =>
+                    setParts((prev) =>
+                      prev.map((existing, partIndex) =>
+                        partIndex === index
+                          ? { ...existing, part_number: event.target.value }
+                          : existing
+                      )
+                    )
+                  }
+                />
+                <Input
+                  type="number"
+                  min={1}
+                  placeholder="Antal"
+                  value={part.quantity}
+                  onChange={(event) =>
+                    setParts((prev) =>
+                      prev.map((existing, partIndex) =>
+                        partIndex === index
+                          ? {
+                              ...existing,
+                              quantity: Number(event.target.value || 1)
+                            }
+                          : existing
+                      )
+                    )
+                  }
+                />
+                <Textarea
+                  placeholder="Notering"
+                  value={part.note ?? ""}
+                  onChange={(event) =>
+                    setParts((prev) =>
+                      prev.map((existing, partIndex) =>
+                        partIndex === index ? { ...existing, note: event.target.value } : existing
+                      )
+                    )
+                  }
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    setParts((prev) => prev.filter((_, partIndex) => partIndex !== index))
+                  }
+                >
+                  Ta bort
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Bilder</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() =>
+                setPhotos((prev) => [
+                  ...prev,
+                  { id: `new-${Date.now()}`, image_url: "", caption: "" }
+                ])
+              }
+            >
+              Lägg till bild
+            </Button>
+            {photos.map((photo, index) => (
+              <div key={photo.id} className="rounded-md border p-3 space-y-2">
+                <Input
+                  placeholder="Bild-URL"
+                  value={photo.image_url}
+                  onChange={(event) =>
+                    setPhotos((prev) =>
+                      prev.map((existing, photoIndex) =>
+                        photoIndex === index
+                          ? { ...existing, image_url: event.target.value }
+                          : existing
+                      )
+                    )
+                  }
+                />
+                <Input
+                  placeholder="Bildtext"
+                  value={photo.caption ?? ""}
+                  onChange={(event) =>
+                    setPhotos((prev) =>
+                      prev.map((existing, photoIndex) =>
+                        photoIndex === index
+                          ? { ...existing, caption: event.target.value }
+                          : existing
+                      )
+                    )
+                  }
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    setPhotos((prev) => prev.filter((_, photoIndex) => photoIndex !== index))
+                  }
+                >
+                  Ta bort
+                </Button>
+              </div>
+            ))}
           </CardContent>
         </Card>
 

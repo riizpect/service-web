@@ -21,10 +21,15 @@ type ServiceCaseRow = {
 async function getCases(): Promise<ServiceCaseRow[]> {
   const cookieStore = cookies();
   const supabase = createClientSupabaseServer(cookieStore);
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+  if (!user) return [];
 
   const { data, error } = await supabase
     .from("service_cases")
     .select("*")
+    .eq("created_by", user.id)
     .order("service_date", { ascending: false });
 
   if (error) {
