@@ -10,6 +10,15 @@ interface CasePageProps {
   params: { id: string };
 }
 
+type ChecklistItemRow = {
+  id: string;
+  section_key: string;
+  item_key: string;
+  item_label: string;
+  item_status: string;
+  part_replaced: boolean | null;
+};
+
 export default async function CasePage({ params }: CasePageProps) {
   const cookieStore = cookies();
   const supabase = createClientSupabaseServer(cookieStore);
@@ -39,8 +48,10 @@ export default async function CasePage({ params }: CasePageProps) {
     .select("*")
     .eq("case_id", params.id);
 
-  const itemsBySection = (items ?? []).reduce<Record<string, typeof items>>(
-    (acc, item) => {
+  const typedItems: ChecklistItemRow[] = (items ?? []) as ChecklistItemRow[];
+
+  const itemsBySection = typedItems.reduce<Record<string, ChecklistItemRow[]>>(
+    (acc: Record<string, ChecklistItemRow[]>, item: ChecklistItemRow) => {
       if (!item) return acc;
       if (!acc[item.section_key]) acc[item.section_key] = [];
       acc[item.section_key]?.push(item);
