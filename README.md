@@ -104,6 +104,19 @@ Internt verktyg för förebyggande underhåll och servicedokumentation av Ferno 
    create index on public.service_cases (product_type);
    ```
 
+   Om du redan har tabellen `service_parts`, kör även detta för reservdelsbehov:
+
+   ```sql
+   alter table public.service_parts
+   add column if not exists needs_order boolean default false,
+   add column if not exists order_status text default 'Ej beställd',
+   add column if not exists priority text default 'Medel',
+   add column if not exists reason text;
+
+   alter table public.service_cases
+   add column if not exists requires_return_visit boolean default false;
+   ```
+
 4. **Auth‑inställningar / Auth settings**
 
    - Aktivera **Email/password** i Supabase Authentication.

@@ -16,6 +16,7 @@ type ServiceCaseRow = {
   vls_serial_number: string | null;
   final_status: string | null;
   is_draft: boolean | null;
+  requires_return_visit: boolean | null;
 };
 
 async function getCases(): Promise<ServiceCaseRow[]> {
@@ -97,6 +98,9 @@ export default async function DashboardPage() {
                     </Badge>
                   </CardHeader>
                   <CardContent className="space-y-1 text-xs md:text-sm">
+                    {c.requires_return_visit && (
+                      <Badge variant="warning">Återbesök krävs</Badge>
+                    )}
                     <p>
                       <span className="font-medium">Produkttyp:</span> {c.product_type}
                     </p>

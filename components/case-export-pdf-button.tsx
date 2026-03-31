@@ -17,6 +17,10 @@ type ServicePart = {
   part_number: string | null;
   quantity: number;
   note: string | null;
+  needs_order?: boolean | null;
+  order_status?: string | null;
+  priority?: string | null;
+  reason?: string | null;
 };
 
 interface CaseExportPdfButtonProps {
@@ -89,21 +93,46 @@ export function CaseExportPdfButton(props: CaseExportPdfButtonProps) {
     });
 
     if (props.parts.length > 0) {
-      autoTable(doc, {
-        startY: (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable
-          ?.finalY
-          ? ((doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY +
-              6)
-          : 160,
-        head: [["Del", "Art.nr", "Antal", "Notering"]],
-        body: props.parts.map((part) => [
-          part.part_name,
-          part.part_number ?? "-",
-          String(part.quantity),
-          part.note ?? "-"
-        ]),
-        styles: { fontSize: 8 }
-      });
+      const replacedParts = props.parts.filter((part) => !part.needs_order);
+      const orderParts = props.parts.filter((part) => part.needs_order);
+
+      if (replacedParts.length > 0) {
+        autoTable(doc, {
+          startY: (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable
+            ?.finalY
+            ? ((doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY +
+                6)
+            : 160,
+          head: [["Ersatta delar", "Art.nr", "Antal", "Notering"]],
+          body: replacedParts.map((part) => [
+            part.part_name,
+            part.part_number ?? "-",
+            String(part.quantity),
+            part.note ?? "-"
+          ]),
+          styles: { fontSize: 8 }
+        });
+      }
+
+      if (orderParts.length > 0) {
+        autoTable(doc, {
+          startY: (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable
+            ?.finalY
+            ? ((doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY +
+                6)
+            : 180,
+          head: [["Reservdel att beställa", "Art.nr", "Antal", "Status", "Prio", "Orsak"]],
+          body: orderParts.map((part) => [
+            part.part_name || "Del ej ifylld",
+            part.part_number ?? "-",
+            String(part.quantity),
+            part.order_status ?? "Ej beställd",
+            part.priority ?? "Medel",
+            part.reason || part.note || "-"
+          ]),
+          styles: { fontSize: 8 }
+        });
+      }
     }
 
     const verdictY = (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable

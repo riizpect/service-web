@@ -42,6 +42,10 @@ type EditablePart = {
   part_number: string | null;
   quantity: number;
   note: string | null;
+  needs_order: boolean | null;
+  order_status: "Ej beställd" | "Beställd" | "Mottagen" | "Monterad" | null;
+  priority: "Låg" | "Medel" | "Hög" | null;
+  reason: string | null;
 };
 
 type EditablePhoto = {
@@ -151,11 +155,37 @@ export default function EditCasePage({ params }: { params: { id: string } }) {
     return getChecklistForProductType(type);
   }, [form?.product_type]);
 
+  const addOrderPartFromDeviation = (sectionKey: string, itemKey: string, itemLabel: string) => {
+    setChecklist((prev) =>
+      prev.map((existing) =>
+        existing.section_key === sectionKey && existing.item_key === itemKey
+          ? { ...existing, item_status: "AVVIKELSE" }
+          : existing
+      )
+    );
+    setParts((prev) => [
+      ...prev,
+      {
+        id: `new-${Date.now()}`,
+        part_name: "",
+        part_number: "",
+        quantity: 1,
+        note: "",
+        needs_order: true,
+        order_status: "Ej beställd",
+        priority: "Medel",
+        reason: `Avvikelse: ${itemLabel}`
+      }
+    ]);
+  };
+
   const save = async () => {
     if (!form) return;
     setSaving(true);
     setError(null);
     const supabase = createClientSupabaseBrowser();
+    const validParts = parts.filter((part) => part.part_name?.trim());
+    const requiresReturnVisit = validParts.some((part) => part.needs_order);
     const { error: saveError } = await supabase
       .from("service_cases")
       .update({
@@ -169,7 +199,8 @@ export default function EditCasePage({ params }: { params: { id: string } }) {
         reference_number: form.reference_number,
         final_status: form.final_status,
         final_comment: form.final_comment,
-        is_draft: form.is_draft
+        is_draft: form.is_draft,
+        requires_return_visit: requiresReturnVisit
       })
       .eq("id", params.id);
 
@@ -195,7 +226,6 @@ export default function EditCasePage({ params }: { params: { id: string } }) {
     }
 
     await supabase.from("service_parts").delete().eq("case_id", params.id);
-    const validParts = parts.filter((part) => part.part_name?.trim());
     if (validParts.length > 0) {
       await supabase.from("service_parts").insert(
         validParts.map((part) => ({
@@ -203,7 +233,11 @@ export default function EditCasePage({ params }: { params: { id: string } }) {
           part_name: part.part_name,
           part_number: part.part_number,
           quantity: part.quantity,
-          note: part.note
+          note: part.note,
+          needs_order: part.needs_order,
+          order_status: part.order_status,
+          priority: part.priority,
+          reason: part.reason
         }))
       );
     }
@@ -416,6 +450,16 @@ export default function EditCasePage({ params }: { params: { id: string } }) {
                         />
                         Ersatt del
                       </label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          addOrderPartFromDeviation(item.section_key, item.item_key, item.item_label)
+                        }
+                      >
+                        Avvikelse: lägg till del att beställa
+                      </Button>
                     </div>
                   ))}
               </div>
@@ -425,9 +469,12 @@ export default function EditCasePage({ params }: { params: { id: string } }) {
 
         <Card>
           <CardHeader>
-            <CardTitle>Ersatta delar</CardTitle>
+            <CardTitle>Delar (bytta + att beställa)</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
+            <p className="text-xs text-muted-foreground">
+              Markera "Behöver beställas" för delar som inte kunde bytas på plats och kräver återbesök.
+            </p>
             <Button
               type="button"
               variant="outline"
@@ -439,7 +486,11 @@ export default function EditCasePage({ params }: { params: { id: string } }) {
                     part_name: "",
                     part_number: "",
                     quantity: 1,
-                    note: ""
+                    note: "",
+                    needs_order: false,
+                    order_status: "Ej beställd",
+                    priority: "Medel",
+                    reason: ""
                   }
                 ])
               }
@@ -499,6 +550,78 @@ export default function EditCasePage({ params }: { params: { id: string } }) {
                     setParts((prev) =>
                       prev.map((existing, partIndex) =>
                         partIndex === index ? { ...existing, note: event.target.value } : existing
+                      )
+                    )
+                  }
+                />
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(part.needs_order)}
+                    onChange={(event) =>
+                      setParts((prev) =>
+                        prev.map((existing, partIndex) =>
+                          partIndex === index
+                            ? { ...existing, needs_order: event.target.checked }
+                            : existing
+                        )
+                      )
+                    }
+                  />
+                  Behöver beställas
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <Select
+                    value={part.order_status ?? "Ej beställd"}
+                    onChange={(event) =>
+                      setParts((prev) =>
+                        prev.map((existing, partIndex) =>
+                          partIndex === index
+                            ? {
+                                ...existing,
+                                order_status: event.target.value as
+                                  | "Ej beställd"
+                                  | "Beställd"
+                                  | "Mottagen"
+                                  | "Monterad"
+                              }
+                            : existing
+                        )
+                      )
+                    }
+                  >
+                    <option value="Ej beställd">Ej beställd</option>
+                    <option value="Beställd">Beställd</option>
+                    <option value="Mottagen">Mottagen</option>
+                    <option value="Monterad">Monterad</option>
+                  </Select>
+                  <Select
+                    value={part.priority ?? "Medel"}
+                    onChange={(event) =>
+                      setParts((prev) =>
+                        prev.map((existing, partIndex) =>
+                          partIndex === index
+                            ? {
+                                ...existing,
+                                priority: event.target.value as "Låg" | "Medel" | "Hög"
+                              }
+                            : existing
+                        )
+                      )
+                    }
+                  >
+                    <option value="Låg">Låg prioritet</option>
+                    <option value="Medel">Medel prioritet</option>
+                    <option value="Hög">Hög prioritet</option>
+                  </Select>
+                </div>
+                <Textarea
+                  placeholder="Orsak / varför delen behövs"
+                  value={part.reason ?? ""}
+                  onChange={(event) =>
+                    setParts((prev) =>
+                      prev.map((existing, partIndex) =>
+                        partIndex === index ? { ...existing, reason: event.target.value } : existing
                       )
                     )
                   }

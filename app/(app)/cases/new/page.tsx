@@ -42,7 +42,13 @@ const formSchema = z.object({
         part_name: z.string().min(1),
         part_number: z.string().optional(),
         quantity: z.coerce.number().min(1).default(1),
-        note: z.string().optional()
+        note: z.string().optional(),
+        needs_order: z.boolean().default(false),
+        order_status: z
+          .enum(["Ej beställd", "Beställd", "Mottagen", "Monterad"])
+          .default("Ej beställd"),
+        priority: z.enum(["Låg", "Medel", "Hög"]).default("Medel"),
+        reason: z.string().optional()
       })
     )
     .default([]),
@@ -190,6 +196,17 @@ export default function NewCasePage() {
         return;
       }
       const partsToSave = values.parts.filter((part) => part.part_name?.trim());
+      const requiresReturnVisit = partsToSave.some((part) => part.needs_order);
+      const { error: caseFlagError } = await supabase
+        .from("service_cases")
+        .update({ requires_return_visit: requiresReturnVisit })
+        .eq("id", caseId);
+      if (caseFlagError) {
+        await supabase.from("service_cases").delete().eq("id", caseId);
+        setError("Kunde inte sätta återbesök-status. Ärendet sparades inte.");
+        setSaving(null);
+        return;
+      }
       if (partsToSave.length > 0) {
         const { error: partsError } = await supabase.from("service_parts").insert(
           partsToSave.map((part) => ({
@@ -197,7 +214,11 @@ export default function NewCasePage() {
             part_name: part.part_name,
             part_number: part.part_number,
             quantity: part.quantity,
-            note: part.note
+            note: part.note,
+            needs_order: part.needs_order,
+            order_status: part.order_status,
+            priority: part.priority,
+            reason: part.reason
           }))
         );
         if (partsError) {
@@ -239,6 +260,22 @@ export default function NewCasePage() {
   const onInvalidSubmit = () => {
     setSaving(null);
     setError("Formuläret är inte komplett. Kontrollera obligatoriska fält.");
+  };
+
+  const addOrderPartFromDeviation = (itemLabel: string, checklistIndex: number) => {
+    setValue(`checklist_items.${checklistIndex}.status`, "AVVIKELSE");
+    partsArray.append({
+      part_name: "",
+      part_number: "",
+      quantity: 1,
+      note: "",
+      needs_order: true,
+      order_status: "Ej beställd",
+      priority: "Medel",
+      reason: `Avvikelse: ${itemLabel}`
+    });
+    setValue("step", 3);
+    setTab("parts");
   };
 
   const handlePreviewComplete = async () => {
@@ -493,6 +530,14 @@ export default function NewCasePage() {
                             Ersatt del
                           </label>
                           <Textarea placeholder="Kommentar (valfritt)" {...register(`checklist_items.${index}.comment`)} />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => addOrderPartFromDeviation(field.item_label, index)}
+                          >
+                            Avvikelse: lägg till del att beställa
+                          </Button>
                         </div>
                       );
                     })}
@@ -502,7 +547,7 @@ export default function NewCasePage() {
 
             {currentStep === 3 && (
               <Card>
-                <CardHeader><CardTitle>Bilder och ersatta delar</CardTitle></CardHeader>
+                <CardHeader><CardTitle>Bilder och delar (bytta + att beställa)</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-2">
                     <Button type="button" variant={tab === "photos" ? "default" : "outline"} onClick={() => setTab("photos")}>Bilder</Button>
@@ -522,13 +567,58 @@ export default function NewCasePage() {
                   )}
                   {tab === "parts" && (
                     <div className="space-y-2">
-                      <Button type="button" variant="outline" onClick={() => partsArray.append({ part_name: "", part_number: "", quantity: 1 })}>Lägg till del</Button>
+                      <p className="text-xs text-muted-foreground">
+                        Markera "Behöver beställas" för delar som saknas nu och kräver återbesök.
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() =>
+                          partsArray.append({
+                            part_name: "",
+                            part_number: "",
+                            quantity: 1,
+                            note: "",
+                            needs_order: false,
+                            order_status: "Ej beställd",
+                            priority: "Medel",
+                            reason: ""
+                          })
+                        }
+                      >
+                        Lägg till del
+                      </Button>
                       {partsArray.fields.map((field, index) => (
                         <div key={field.id} className="rounded-md border p-3 space-y-2">
                           <Input placeholder="Delnamn" {...register(`parts.${index}.part_name`)} />
                           <Input placeholder="Artikelnummer" {...register(`parts.${index}.part_number`)} />
                           <Input type="number" min={1} placeholder="Antal" {...register(`parts.${index}.quantity`, { valueAsNumber: true })} />
                           <Textarea placeholder="Notering" {...register(`parts.${index}.note`)} />
+                          <label className="flex items-center gap-2 text-xs">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4"
+                              {...register(`parts.${index}.needs_order`)}
+                            />
+                            Behöver beställas
+                          </label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Select {...register(`parts.${index}.order_status`)}>
+                              <option value="Ej beställd">Ej beställd</option>
+                              <option value="Beställd">Beställd</option>
+                              <option value="Mottagen">Mottagen</option>
+                              <option value="Monterad">Monterad</option>
+                            </Select>
+                            <Select {...register(`parts.${index}.priority`)}>
+                              <option value="Låg">Låg prioritet</option>
+                              <option value="Medel">Medel prioritet</option>
+                              <option value="Hög">Hög prioritet</option>
+                            </Select>
+                          </div>
+                          <Textarea
+                            placeholder="Orsak / varför delen behövs"
+                            {...register(`parts.${index}.reason`)}
+                          />
                           <Button type="button" variant="ghost" size="sm" onClick={() => partsArray.remove(index)}>Ta bort</Button>
                         </div>
                       ))}

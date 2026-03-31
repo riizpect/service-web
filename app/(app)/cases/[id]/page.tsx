@@ -28,6 +28,10 @@ type ServicePartRow = {
   part_number: string | null;
   quantity: number;
   note: string | null;
+  needs_order: boolean | null;
+  order_status: string | null;
+  priority: string | null;
+  reason: string | null;
 };
 
 type ServicePhotoRow = {
@@ -73,6 +77,11 @@ export default async function CasePage({ params }: CasePageProps) {
   const typedItems: ChecklistItemRow[] = (items ?? []) as ChecklistItemRow[];
   const typedParts: ServicePartRow[] = (parts ?? []) as ServicePartRow[];
   const typedPhotos: ServicePhotoRow[] = (photos ?? []) as ServicePhotoRow[];
+  const partsToOrder = typedParts.filter((part) => part.needs_order);
+  const requiresReturnVisit =
+    Boolean((serviceCase as { requires_return_visit?: boolean | null }).requires_return_visit) ||
+    partsToOrder.length > 0;
+  const replacedParts = typedParts.filter((part) => !part.needs_order);
   const serialPhotos = typedPhotos.filter((photo) =>
     (photo.caption ?? "").startsWith("SERIAL|")
   );
@@ -125,6 +134,7 @@ export default async function CasePage({ params }: CasePageProps) {
                 ? "Utkast"
                 : serviceCase.final_status || "Status ej satt"}
             </Badge>
+            {requiresReturnVisit && <Badge variant="warning">Återbesök krävs</Badge>}
             <Link href={`/cases/${serviceCase.id}/edit`}>
               <Button variant="outline" size="sm">
                 Redigera
@@ -301,10 +311,10 @@ export default async function CasePage({ params }: CasePageProps) {
               <CardTitle>Ersatta delar</CardTitle>
             </CardHeader>
             <CardContent className="space-y-1 text-xs md:text-sm">
-              {typedParts.length === 0 ? (
+              {replacedParts.length === 0 ? (
                 <p className="text-muted-foreground">Inga ersatta delar registrerade.</p>
               ) : (
-                typedParts.map((p: ServicePartRow) => (
+                replacedParts.map((p: ServicePartRow) => (
                   <div
                     key={p.id}
                     className="flex flex-col rounded-md border px-3 py-2"
@@ -327,36 +337,68 @@ export default async function CasePage({ params }: CasePageProps) {
 
           <Card>
             <CardHeader>
-              <CardTitle>Bilder</CardTitle>
+              <CardTitle>Reservdelar att beställa (återbesök)</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
-              {generalPhotos.length === 0 ? (
-                <p className="text-xs text-muted-foreground">
-                  Inga bilder uppladdade i detta ärende.
+            <CardContent className="space-y-1 text-xs md:text-sm">
+              {partsToOrder.length === 0 ? (
+                <p className="text-muted-foreground">
+                  Inget beställningsbehov registrerat.
                 </p>
               ) : (
-                <div className="grid grid-cols-2 gap-2">
-                  {generalPhotos.map((photo: ServicePhotoRow) => (
-                    <div key={photo.id} className="space-y-1">
-                      {/* For MVP we just render img from URL */}
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={photo.image_url}
-                        alt={photo.caption ?? "Servicebild"}
-                        className="h-32 w-full rounded-md object-cover"
-                      />
-                      {photo.caption && (
-                        <p className="text-[11px] text-muted-foreground">
-                          {photo.caption}
-                        </p>
-                      )}
+                partsToOrder.map((p: ServicePartRow) => (
+                  <div key={p.id} className="flex flex-col rounded-md border px-3 py-2">
+                    <span className="font-medium">
+                      {p.part_name || "Del ej ifylld"}
+                    </span>
+                    <span>
+                      Antal: {p.quantity} {p.part_number ? `• Art.nr: ${p.part_number}` : ""}
+                    </span>
+                    <div className="mt-1 flex flex-wrap items-center gap-1">
+                      <Badge variant="warning">Behöver beställas</Badge>
+                      <Badge variant="outline">Status: {p.order_status || "Ej beställd"}</Badge>
+                      <Badge variant="outline">Prioritet: {p.priority || "Medel"}</Badge>
                     </div>
-                  ))}
-                </div>
+                    <span className="text-xs text-muted-foreground">
+                      Orsak: {p.reason || p.note || "Ej ifyllt"}
+                    </span>
+                  </div>
+                ))
               )}
             </CardContent>
           </Card>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Bilder</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {generalPhotos.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Inga bilder uppladdade i detta ärende.
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                {generalPhotos.map((photo: ServicePhotoRow) => (
+                  <div key={photo.id} className="space-y-1">
+                    {/* For MVP we just render img from URL */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={photo.image_url}
+                      alt={photo.caption ?? "Servicebild"}
+                      className="h-32 w-full rounded-md object-cover"
+                    />
+                    {photo.caption && (
+                      <p className="text-[11px] text-muted-foreground">
+                        {photo.caption}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </main>
   );
