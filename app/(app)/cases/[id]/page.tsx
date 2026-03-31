@@ -67,6 +67,17 @@ export default async function CasePage({ params }: CasePageProps) {
   const typedItems: ChecklistItemRow[] = (items ?? []) as ChecklistItemRow[];
   const typedParts: ServicePartRow[] = (parts ?? []) as ServicePartRow[];
   const typedPhotos: ServicePhotoRow[] = (photos ?? []) as ServicePhotoRow[];
+  const serialPhotos = typedPhotos.filter((photo) =>
+    (photo.caption ?? "").startsWith("SERIAL|")
+  );
+  const checklistPhotos = typedPhotos.filter((photo) =>
+    (photo.caption ?? "").startsWith("ITEM|")
+  );
+  const generalPhotos = typedPhotos.filter(
+    (photo) =>
+      !(photo.caption ?? "").startsWith("SERIAL|") &&
+      !(photo.caption ?? "").startsWith("ITEM|")
+  );
 
   const itemsBySection = typedItems.reduce<Record<string, ChecklistItemRow[]>>(
     (acc: Record<string, ChecklistItemRow[]>, item: ChecklistItemRow) => {
@@ -146,6 +157,30 @@ export default async function CasePage({ params }: CasePageProps) {
                 <span className="font-medium">Arbetsorder/ref:</span>{" "}
                 {serviceCase.reference_number || "-"}
               </p>
+              <div className="md:col-span-2 space-y-1">
+                <p>
+                  <span className="font-medium">Serienummerbilder:</span>
+                </p>
+                {serialPhotos.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Inga serienummerbilder.</p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    {serialPhotos.map((photo) => (
+                      <div key={photo.id} className="space-y-1">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={photo.image_url}
+                          alt={photo.caption ?? "Serienummerbild"}
+                          className="h-24 w-full rounded-md object-cover"
+                        />
+                        <p className="text-[11px] text-muted-foreground">
+                          {(photo.caption ?? "").replace("SERIAL|", "")}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -226,6 +261,22 @@ export default async function CasePage({ params }: CasePageProps) {
                         {item.part_replaced && (
                           <Badge variant="outline">Ersatt del</Badge>
                         )}
+                        {checklistPhotos.filter((photo) =>
+                          (photo.caption ?? "").startsWith(
+                            `ITEM|${item.section_key}|${item.item_key}|`
+                          )
+                        ).length > 0 && (
+                          <Badge variant="outline">
+                            Foto:{" "}
+                            {
+                              checklistPhotos.filter((photo) =>
+                                (photo.caption ?? "").startsWith(
+                                  `ITEM|${item.section_key}|${item.item_key}|`
+                                )
+                              ).length
+                            }
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -270,13 +321,13 @@ export default async function CasePage({ params }: CasePageProps) {
               <CardTitle>Bilder</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {typedPhotos.length === 0 ? (
+              {generalPhotos.length === 0 ? (
                 <p className="text-xs text-muted-foreground">
                   Inga bilder uppladdade i detta ärende.
                 </p>
               ) : (
                 <div className="grid grid-cols-2 gap-2">
-                  {typedPhotos.map((photo: ServicePhotoRow) => (
+                  {generalPhotos.map((photo: ServicePhotoRow) => (
                     <div key={photo.id} className="space-y-1">
                       {/* For MVP we just render img from URL */}
                       {/* eslint-disable-next-line @next/next/no-img-element */}

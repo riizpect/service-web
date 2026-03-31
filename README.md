@@ -36,6 +36,7 @@ Internt verktyg för förebyggande underhåll och servicedokumentation av Ferno 
    ```bash
    NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+   NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET=service-photos
    ```
 
 3. **Supabase-databas / Supabase database schema**
@@ -114,6 +115,12 @@ Internt verktyg för förebyggande underhåll och servicedokumentation av Ferno 
    npm run dev
    # öppna http://localhost:3000/login
    ```
+
+6. **Supabase Storage för kamera / Supabase Storage for camera**
+
+   - Skapa en bucket i Supabase Storage, t.ex. `service-photos`.
+   - Sätt bucket till public för enkel MVP-visning av bilder.
+   - Lägg till env-variabeln `NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET=service-photos`.
 
 ### 3. Koppla Supabase / Connect Supabase
 

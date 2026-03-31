@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, FormProvider, useFieldArray } from "react-hook-form";
 import { z } from "zod";
@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Camera } from "lucide-react";
 
 const formSchema = z.object({
   step: z.number().default(1),
@@ -64,6 +65,9 @@ export default function NewCasePage() {
   const [error, setError] = useState<string | null>(null);
   const [checklistSectionIndex, setChecklistSectionIndex] = useState(0);
   const [tab, setTab] = useState<"photos" | "parts">("photos");
+  const [uploadingTarget, setUploadingTarget] = useState<string | null>(null);
+  const viperSerialInputRef = useRef<HTMLInputElement | null>(null);
+  const vlsSerialInputRef = useRef<HTMLInputElement | null>(null);
 
   const methods = useForm<ServiceCaseFormValues>({
     resolver: zodResolver(formSchema),
@@ -180,6 +184,43 @@ export default function NewCasePage() {
     router.push(`/cases/${caseId}`);
   };
 
+  const uploadImage = async (file: File, caption: string) => {
+    const supabase = createClientSupabaseBrowser();
+    const bucketName = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "service-photos";
+    const extension = file.name.split(".").pop() || "jpg";
+    const filePath = `cases/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+    const { error: uploadError } = await supabase.storage
+      .from(bucketName)
+      .upload(filePath, file, { upsert: false });
+    if (uploadError) {
+      throw new Error(uploadError.message);
+    }
+    const { data } = supabase.storage.from(bucketName).getPublicUrl(filePath);
+    photosArray.append({
+      image_url: data.publicUrl,
+      caption
+    });
+  };
+
+  const handleImageCapture = async (
+    file: File | null,
+    caption: string,
+    target: string
+  ) => {
+    if (!file) return;
+    setError(null);
+    setUploadingTarget(target);
+    try {
+      await uploadImage(file, caption);
+    } catch {
+      setError(
+        "Kunde inte ladda upp bilden. Kontrollera att Storage bucket finns i Supabase."
+      );
+    } finally {
+      setUploadingTarget(null);
+    }
+  };
+
   return (
     <main className="flex-1">
       <div className="container py-4 space-y-4">
@@ -213,8 +254,68 @@ export default function NewCasePage() {
                     <option value="VLS">VLS</option>
                     <option value="VIPER_VLS">VIPER + VLS</option>
                   </Select>
-                  <Input placeholder="VIPER serienummer" {...register("viper_serial_number")} />
-                  <Input placeholder="VLS serienummer" {...register("vls_serial_number")} />
+                  <div className="space-y-2">
+                    <Input placeholder="VIPER serienummer" {...register("viper_serial_number")} />
+                    <div className="flex items-center gap-2">
+                      <input
+                        ref={viperSerialInputRef}
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        className="hidden"
+                        onChange={(event) =>
+                          handleImageCapture(
+                            event.target.files?.[0] ?? null,
+                            "SERIAL|VIPER",
+                            "serial-viper"
+                          )
+                        }
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => viperSerialInputRef.current?.click()}
+                        disabled={uploadingTarget === "serial-viper"}
+                      >
+                        <Camera className="mr-1 h-4 w-4" />
+                        {uploadingTarget === "serial-viper"
+                          ? "Laddar upp..."
+                          : "Foto serienummer VIPER"}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Input placeholder="VLS serienummer" {...register("vls_serial_number")} />
+                    <div className="flex items-center gap-2">
+                      <input
+                        ref={vlsSerialInputRef}
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        className="hidden"
+                        onChange={(event) =>
+                          handleImageCapture(
+                            event.target.files?.[0] ?? null,
+                            "SERIAL|VLS",
+                            "serial-vls"
+                          )
+                        }
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => vlsSerialInputRef.current?.click()}
+                        disabled={uploadingTarget === "serial-vls"}
+                      >
+                        <Camera className="mr-1 h-4 w-4" />
+                        {uploadingTarget === "serial-vls"
+                          ? "Laddar upp..."
+                          : "Foto serienummer VLS"}
+                      </Button>
+                    </div>
+                  </div>
                   <Input placeholder="Arbetsorder / referensnummer" {...register("reference_number")} />
                 </CardContent>
               </Card>
@@ -235,9 +336,54 @@ export default function NewCasePage() {
                       const index = checklistArray.fields.findIndex((f) => f.id === field.id);
                       const statusValue = watch(`checklist_items.${index}.status`) as ChecklistStatus;
                       const isDeviation = statusValue === "AVVIKELSE" || statusValue === "EJ_KONTROLLERAD";
+                      const itemPhotoCount = watch("photos").filter((photo) =>
+                        (photo.caption ?? "").startsWith(
+                          `ITEM|${field.section_key}|${field.item_key}|`
+                        )
+                      ).length;
                       return (
                         <div key={field.id} className={`rounded-md border p-3 space-y-2 ${isDeviation ? "border-red-400 bg-red-50" : ""}`}>
-                          <p className="text-sm font-medium">{field.item_label}</p>
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-sm font-medium">{field.item_label}</p>
+                            <div>
+                              <input
+                                id={`item-photo-${field.id}`}
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                className="hidden"
+                                onChange={(event) =>
+                                  handleImageCapture(
+                                    event.target.files?.[0] ?? null,
+                                    `ITEM|${field.section_key}|${field.item_key}|${field.item_label}`,
+                                    `item-${field.id}`
+                                  )
+                                }
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  document
+                                    .getElementById(`item-photo-${field.id}`)
+                                    ?.click()
+                                }
+                                disabled={uploadingTarget === `item-${field.id}`}
+                                className="h-8 px-2"
+                                title="Ta bild på denna punkt"
+                              >
+                                <Camera className="h-4 w-4" />
+                                <span className="ml-1 text-xs">
+                                  {uploadingTarget === `item-${field.id}`
+                                    ? "..."
+                                    : itemPhotoCount > 0
+                                    ? itemPhotoCount
+                                    : ""}
+                                </span>
+                              </Button>
+                            </div>
+                          </div>
                           <label className="flex items-center gap-2 rounded-md border bg-background px-2 py-2 text-sm">
                             <input
                               type="checkbox"
