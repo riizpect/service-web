@@ -74,6 +74,7 @@ export default function NewCasePage() {
   const [checklistSectionIndex, setChecklistSectionIndex] = useState(0);
   const [tab, setTab] = useState<"photos" | "parts">("photos");
   const [uploadingTarget, setUploadingTarget] = useState<string | null>(null);
+  const [uploadProgressByTarget, setUploadProgressByTarget] = useState<Record<string, number>>({});
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
   const viperSerialInputRef = useRef<HTMLInputElement | null>(null);
   const vlsSerialInputRef = useRef<HTMLInputElement | null>(null);
@@ -167,6 +168,9 @@ export default function NewCasePage() {
     (item) => item.status === "AVVIKELSE" || item.status === "EJ_KONTROLLERAD"
   );
   const checklistItems = watch("checklist_items");
+  const photos = watch("photos");
+  const viperSerialPhotos = photos.filter((photo) => photo.caption === "SERIAL|VIPER");
+  const vlsSerialPhotos = photos.filter((photo) => photo.caption === "SERIAL|VLS");
   const checkedCount = checklistItems.filter((item) => item.status === "OK").length;
   const deviationCount = checklistItems.filter((item) => item.status === "AVVIKELSE").length;
   const notCheckedCount = checklistItems.filter(
@@ -332,17 +336,56 @@ export default function NewCasePage() {
     await saveCase(values, "complete", true);
   };
 
-  const uploadImage = async (file: File, caption: string) => {
+  const uploadImage = async (file: File, caption: string, target: string) => {
     const supabase = createClientSupabaseBrowser();
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error("Supabase miljövariabler saknas.");
+    }
+    const {
+      data: { session }
+    } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      throw new Error("Ingen aktiv inloggning hittades.");
+    }
     const bucketName = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "service-photos";
     const extension = file.name.split(".").pop() || "jpg";
     const filePath = `cases/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
-    const { error: uploadError } = await supabase.storage
-      .from(bucketName)
-      .upload(filePath, file, { upsert: false });
-    if (uploadError) {
-      throw new Error(uploadError.message);
-    }
+    const uploadUrl = `${supabaseUrl}/storage/v1/object/${bucketName}/${filePath}`;
+
+    await new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", uploadUrl);
+      xhr.setRequestHeader("apikey", supabaseAnonKey);
+      xhr.setRequestHeader("Authorization", `Bearer ${session.access_token}`);
+      xhr.setRequestHeader("x-upsert", "false");
+      xhr.setRequestHeader("content-type", file.type || "image/jpeg");
+
+      xhr.upload.onprogress = (event) => {
+        if (!event.lengthComputable) return;
+        const progress = Math.min(99, Math.round((event.loaded / event.total) * 100));
+        setUploadProgressByTarget((prev) => ({ ...prev, [target]: progress }));
+      };
+      xhr.onerror = () => reject(new Error("Nätverksfel vid bilduppladdning."));
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          setUploadProgressByTarget((prev) => ({ ...prev, [target]: 100 }));
+          resolve();
+          return;
+        }
+        let message = `Upload misslyckades (${xhr.status})`;
+        try {
+          const parsed = JSON.parse(xhr.responseText) as { message?: string; error?: string };
+          message = parsed.message || parsed.error || message;
+        } catch {
+          // Keep fallback message.
+        }
+        reject(new Error(message));
+      };
+      xhr.send(file);
+    });
+
     const { data } = supabase.storage.from(bucketName).getPublicUrl(filePath);
     photosArray.append({
       image_url: data.publicUrl,
@@ -358,14 +401,23 @@ export default function NewCasePage() {
     if (!file) return;
     setError(null);
     setUploadingTarget(target);
+    setUploadProgressByTarget((prev) => ({ ...prev, [target]: 0 }));
     try {
-      await uploadImage(file, caption);
-    } catch {
+      await uploadImage(file, caption, target);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Okänt fel";
       setError(
-        "Kunde inte ladda upp bilden. Kontrollera att Storage bucket finns i Supabase."
+        `Kunde inte ladda upp bilden: ${message}`
       );
     } finally {
       setUploadingTarget(null);
+      setTimeout(() => {
+        setUploadProgressByTarget((prev) => {
+          const copy = { ...prev };
+          delete copy[target];
+          return copy;
+        });
+      }, 1200);
     }
   };
 
@@ -451,6 +503,24 @@ export default function NewCasePage() {
                           : "Foto serienummer VIPER"}
                       </Button>
                     </div>
+                    {typeof uploadProgressByTarget["serial-viper"] === "number" && (
+                      <p className="text-xs text-muted-foreground">
+                        Uppladdning: {uploadProgressByTarget["serial-viper"]}%
+                      </p>
+                    )}
+                    {viperSerialPhotos.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">
+                          Förhandsvisning ({viperSerialPhotos.length})
+                        </p>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={viperSerialPhotos[viperSerialPhotos.length - 1]?.image_url}
+                          alt="VIPER serienummer"
+                          className="h-24 w-full max-w-[200px] rounded-md border object-cover"
+                        />
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Input placeholder="VLS serienummer" {...register("vls_serial_number")} />
@@ -482,6 +552,24 @@ export default function NewCasePage() {
                           : "Foto serienummer VLS"}
                       </Button>
                     </div>
+                    {typeof uploadProgressByTarget["serial-vls"] === "number" && (
+                      <p className="text-xs text-muted-foreground">
+                        Uppladdning: {uploadProgressByTarget["serial-vls"]}%
+                      </p>
+                    )}
+                    {vlsSerialPhotos.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">
+                          Förhandsvisning ({vlsSerialPhotos.length})
+                        </p>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={vlsSerialPhotos[vlsSerialPhotos.length - 1]?.image_url}
+                          alt="VLS serienummer"
+                          className="h-24 w-full max-w-[200px] rounded-md border object-cover"
+                        />
+                      </div>
+                    )}
                   </div>
                   <Input placeholder="Arbetsorder / referensnummer" {...register("reference_number")} />
                 </CardContent>
@@ -503,11 +591,12 @@ export default function NewCasePage() {
                       const index = checklistArray.fields.findIndex((f) => f.id === field.id);
                       const statusValue = watch(`checklist_items.${index}.status`) as ChecklistStatus;
                       const isDeviation = statusValue === "AVVIKELSE" || statusValue === "EJ_KONTROLLERAD";
-                      const itemPhotoCount = watch("photos").filter((photo) =>
+                      const itemPhotos = photos.filter((photo) =>
                         (photo.caption ?? "").startsWith(
                           `ITEM|${field.section_key}|${field.item_key}|`
                         )
-                      ).length;
+                      );
+                      const itemPhotoCount = itemPhotos.length;
                       return (
                         <div key={field.id} className={`rounded-md border p-3 space-y-2 ${isDeviation ? "border-red-400 bg-red-50" : ""}`}>
                           <div className="flex items-center justify-between gap-2">
@@ -551,6 +640,24 @@ export default function NewCasePage() {
                               </Button>
                             </div>
                           </div>
+                          {typeof uploadProgressByTarget[`item-${field.id}`] === "number" && (
+                            <p className="text-xs text-muted-foreground">
+                              Uppladdning: {uploadProgressByTarget[`item-${field.id}`]}%
+                            </p>
+                          )}
+                          {itemPhotos.length > 0 && (
+                            <div className="space-y-1">
+                              <p className="text-xs text-muted-foreground">
+                                Förhandsvisning ({itemPhotos.length})
+                              </p>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={itemPhotos[itemPhotos.length - 1]?.image_url}
+                                alt={field.item_label}
+                                className="h-24 w-full max-w-[220px] rounded-md border object-cover"
+                              />
+                            </div>
+                          )}
                           <label className="flex items-center gap-2 rounded-md border bg-background px-2 py-2 text-sm">
                             <input
                               type="checkbox"
