@@ -296,12 +296,12 @@ export default function NewCasePage() {
                   <div className="grid grid-cols-2 gap-2">
                     <Input
                       type="date"
-                      className="h-10 rounded-lg"
+                      className="h-10 min-w-0 w-full rounded-lg appearance-none"
                       {...register("service_date")}
                     />
                     <Input
                       placeholder="Servicetekniker"
-                      className="h-10 min-w-0 rounded-lg"
+                      className="h-10 min-w-0 w-full rounded-lg"
                       {...register("technician_name")}
                     />
                   </div>

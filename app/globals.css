@@ -17,6 +17,17 @@ button {
   -webkit-tap-highlight-color: transparent;
 }
 
+input[type="date"] {
+  min-width: 0;
+  width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+}
+
 ::selection {
   background: rgba(15, 23, 42, 0.14);
 }
