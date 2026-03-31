@@ -39,8 +39,15 @@ export const VIPER_CHECKLIST: ProductChecklistConfig = {
       items: [
         { key: "ram_rails", label: "Ram och rails fria från sprickor eller skador" },
         { key: "guidehjul", label: "Guidehjul och rullar snurrar fritt" },
+        { key: "panel_cover", label: "Panel cover i gott skick utan överdrivet glapp" },
         { key: "plastpluggar", label: "Plastpluggar sitter korrekt" },
-        { key: "silent_blocks", label: "Silent blocks hela" }
+        { key: "silent_blocks", label: "Silent blocks hela" },
+        { key: "front_retaining_nuts", label: "Muttrar på front retaining pins sitter fast" },
+        { key: "rear_weldment_rolls", label: "Rullar på rear weldment i gott skick" },
+        {
+          key: "swingarm_guide_bar",
+          label: "Loading arm swingarm guide bar utan överdrivet slitage"
+        }
       ]
     },
     {
@@ -49,6 +56,10 @@ export const VIPER_CHECKLIST: ProductChecklistConfig = {
       items: [
         { key: "front_lock", label: "Front lock fungerar korrekt" },
         { key: "plunger_switch_skick", label: "Plunger switch i gott skick" },
+        {
+          key: "plunger_switch_lever",
+          label: "Plunger switch control lever i gott skick"
+        },
         { key: "lasning_vls", label: "Låsning testad i VLS" }
       ]
     },
@@ -69,7 +80,34 @@ export const VIPER_CHECKLIST: ProductChecklistConfig = {
       items: [
         { key: "ryggstod", label: "Ryggstöd rör sig korrekt" },
         { key: "shock_frame", label: "Shock frame rör sig fritt" },
-        { key: "telescoping_frame", label: "Telescoping frame fungerar smidigt" }
+        { key: "telescoping_frame", label: "Telescoping frame fungerar smidigt" },
+        { key: "loading_tube", label: "Loading tube rör sig/svänger fritt" },
+        { key: "loading_wheels", label: "Loading wheels rör sig/svänger fritt" },
+        {
+          key: "telescoping_guide_rolls",
+          label: "Guide rolls på telescoping frame i gott skick"
+        },
+        {
+          key: "telescoping_plastic_plugs",
+          label: "Plastpluggar på telescoping frame sitter korrekt"
+        }
+      ]
+    },
+    {
+      key: "viper_sx_panels",
+      title: "SX-paneler",
+      items: [
+        { key: "sx_components_present", label: "Alla SX-komponenter finns på plats" },
+        { key: "sx_panel_wear", label: "SX-paneler utan överdrivet slitage" },
+        { key: "sx_screws_secure", label: "Skruvar på SX-paneler sitter fast" },
+        {
+          key: "sx_moving_parts",
+          label: "Rörliga delar i SX-paneler fungerar smidigt"
+        },
+        {
+          key: "sx_locking_positions",
+          label: "Båda SX-paneler låser korrekt i samtliga lägen"
+        }
       ]
     },
     {
@@ -86,7 +124,17 @@ export const VIPER_CHECKLIST: ProductChecklistConfig = {
       items: [
         { key: "hyd_hojer_sanker", label: "Höjer och sänker i hela rörelsen" },
         { key: "hyd_oljelackage", label: "Inga oljeläckage" },
-        { key: "hyd_missljud", label: "Inga missljud" }
+        { key: "hyd_missljud", label: "Inga missljud" },
+        {
+          key: "hyd_areas_1_4",
+          label: "Hydraulik områden 1-4 rena och utan skador/oljerester"
+        },
+        {
+          key: "hyd_plastic_guiding",
+          label: "Plastguidning vid hydrauliken i gott skick"
+        },
+        { key: "hyd_hose_holder", label: "Hose holder i gott skick" },
+        { key: "hyd_hose_clamp", label: "Hose clamp i gott skick" }
       ]
     },
     {
@@ -98,6 +146,10 @@ export const VIPER_CHECKLIST: ProductChecklistConfig = {
         { key: "laddning_extern", label: "Laddning med extern laddare fungerar" },
         { key: "induktiv_sensor", label: "Induktiv sensor fungerar" },
         { key: "plunger_unload", label: "Plunger switch fungerar korrekt vid unload" },
+        {
+          key: "upward_movement_15mm",
+          label: "Uppåtrörelse vid nedkörning är max 15 mm (anglesensor kontrollerad)"
+        },
         {
           key: "kabeldragning",
           label: "Kabeldragning mellan kabeltunnel och elbox i gott skick"
@@ -114,6 +166,27 @@ export const VIPER_CHECKLIST: ProductChecklistConfig = {
       ]
     },
     {
+      key: "viper_sele_madrass",
+      title: "Sele och madrass",
+      items: [
+        { key: "madrass_skick", label: "Madrass i gott skick utan skador" },
+        {
+          key: "madrass_welds_cover",
+          label: "Madrassöverdrag utan hål, svetsfogar i gott skick"
+        },
+        { key: "velcro_pads", label: "Samtliga Velcro-fästen finns och sitter korrekt" },
+        { key: "harness_leg_restraints", label: "Sele och benremmar utan skador/slitage" },
+        {
+          key: "buckles_tangs",
+          label: "Samtliga buckles och tangs fungerar korrekt"
+        },
+        {
+          key: "harness_fixation_bolts",
+          label: "Fästbultar för sele sitter fast"
+        }
+      ]
+    },
+    {
       key: "viper_mjukvara_app",
       title: "Mjukvara och app",
       items: [
@@ -125,6 +198,11 @@ export const VIPER_CHECKLIST: ProductChecklistConfig = {
         {
           key: "serviceapp_installningar",
           label: "Rekommenderade inställningar i serviceapp kontrollerade"
+        },
+        {
+          key: "motor_stop_lowest_xframe",
+          label:
+            "Motor stoppar automatiskt vid lägsta mekaniska position och när x-frame är helt indragen"
         },
         { key: "servicerapport_app", label: "Servicerapport genererad i app" }
       ]
