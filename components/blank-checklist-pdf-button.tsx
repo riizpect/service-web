@@ -43,16 +43,16 @@ export function BlankChecklistPdfButton({ productType }: BlankChecklistPdfButton
           ? ((doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6)
           : 90 + index * 10,
         head: [[section.title, "OK", "Åtgärdad", "Avvikelse", "Ej kontrollerad", "Kommentar"]],
-        body: section.items.map((item) => [item.label, "[]", "[]", "[]", "[]", ""]),
+        body: section.items.map((item) => [item.label, "☐", "☐", "☐", "☐", ""]),
         styles: { fontSize: 8, overflow: "linebreak", minCellHeight: 8, valign: "middle" },
         headStyles: { fillColor: [30, 64, 175] },
         columnStyles: {
-          0: { cellWidth: 84 },
-          1: { cellWidth: 14, halign: "center" },
-          2: { cellWidth: 18, halign: "center" },
-          3: { cellWidth: 16, halign: "center" },
-          4: { cellWidth: 24, halign: "center" },
-          5: { cellWidth: 34 }
+          0: { cellWidth: 72 },
+          1: { cellWidth: 20, halign: "center" },
+          2: { cellWidth: 20, halign: "center" },
+          3: { cellWidth: 20, halign: "center" },
+          4: { cellWidth: 28, halign: "center" },
+          5: { cellWidth: 30 }
         }
       });
     });
