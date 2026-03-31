@@ -269,3 +269,15 @@ export function getChecklistForProductType(
   return [...VIPER_CHECKLIST.sections, ...VLS_CHECKLIST.sections];
 }
 
+const SECTION_TITLE_MAP: Record<string, string> = [
+  ...VIPER_CHECKLIST.sections,
+  ...VLS_CHECKLIST.sections
+].reduce<Record<string, string>>((acc, section) => {
+  acc[section.key] = section.title;
+  return acc;
+}, {});
+
+export function getSectionTitleByKey(sectionKey: string): string {
+  return SECTION_TITLE_MAP[sectionKey] ?? sectionKey;
+}
+

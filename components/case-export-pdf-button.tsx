@@ -38,6 +38,15 @@ interface CaseExportPdfButtonProps {
 export function CaseExportPdfButton(props: CaseExportPdfButtonProps) {
   const handleDownload = () => {
     const doc = new jsPDF();
+    const normalizedFinalStatus = props.finalStatus ?? "Ej ifyllt";
+    const verdictLabel =
+      normalizedFinalStatus === "Godkänd"
+        ? "Fordon/utrustning godkänd för drift"
+        : normalizedFinalStatus === "Godkänd med anmärkning"
+        ? "Godkänd med anmärkning - åtgärd rekommenderas"
+        : normalizedFinalStatus === "Ej godkänd"
+        ? "Ej godkänd - åtgärd krävs innan drift"
+        : "Ej ifyllt";
 
     doc.setFontSize(16);
     doc.text("Servicerapport - Ferno", 14, 16);
@@ -56,7 +65,7 @@ export function CaseExportPdfButton(props: CaseExportPdfButtonProps) {
         ["VIPER serienummer", props.viperSerial ?? "-"],
         ["VLS serienummer", props.vlsSerial ?? "-"],
         ["Referensnummer", props.referenceNumber ?? "-"],
-        ["Slutstatus", props.finalStatus ?? "-"],
+        ["Slutstatus", normalizedFinalStatus],
         ["Slutkommentar", props.finalComment ?? "-"]
       ],
       styles: { fontSize: 9 }
@@ -96,6 +105,18 @@ export function CaseExportPdfButton(props: CaseExportPdfButtonProps) {
         styles: { fontSize: 8 }
       });
     }
+
+    const verdictY = (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable
+      ?.finalY
+      ? ((doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 14)
+      : 250;
+
+    doc.setFontSize(12);
+    doc.text("Slutbedömning", 14, verdictY);
+    doc.setFontSize(11);
+    doc.text(`Status: ${normalizedFinalStatus}`, 14, verdictY + 8);
+    doc.setFontSize(10);
+    doc.text(`Bedömning: ${verdictLabel}`, 14, verdictY + 14);
 
     const safeCustomer = (props.customerName ?? "kund").replace(/\s+/g, "-");
     const safeDate = props.serviceDate ?? "datum";

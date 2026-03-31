@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { CaseExportPdfButton } from "@/components/case-export-pdf-button";
+import { getSectionTitleByKey } from "@/lib/checklistConfig";
 
 interface CasePageProps {
   params: { id: string };
@@ -211,7 +212,7 @@ export default async function CasePage({ params }: CasePageProps) {
                 finalStatus={serviceCase.final_status}
                 finalComment={serviceCase.final_comment}
                 checklistItems={typedItems.map((item) => ({
-                  section: item.section_key,
+                  section: getSectionTitleByKey(item.section_key),
                   label: item.item_label,
                   status: item.item_status,
                   comment: item.comment,
@@ -231,7 +232,7 @@ export default async function CasePage({ params }: CasePageProps) {
             {Object.entries(itemsBySection).map(([sectionKey, sectionItems]) => (
               <div key={sectionKey} className="space-y-1">
                 <h2 className="text-sm font-semibold">
-                  {sectionItems?.[0]?.section_key ?? sectionKey}
+                  {getSectionTitleByKey(sectionItems?.[0]?.section_key ?? sectionKey)}
                 </h2>
                 <div className="space-y-1">
                   {sectionItems?.map((item) => (
