@@ -89,50 +89,46 @@ export function CaseExportPdfButton(props: CaseExportPdfButtonProps) {
         ?.finalY
         ? ((doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6)
         : 80,
-      head: [["Sektion", "Punkt", "Status", "Kommentar", "Ersatt del"]],
-      body: props.checklistItems.map((item) => [
-        item.section,
-        item.label,
-        formatChecklistStatus(item.status),
-        item.comment ?? "-",
-        item.partReplaced ? "Ja" : "Nej"
-      ]),
-      styles: { fontSize: 8, overflow: "linebreak", cellPadding: 2.2, valign: "top" },
-      headStyles: { fillColor: [30, 64, 175] },
-      columnStyles: {
-        0: { cellWidth: 28 },
-        1: { cellWidth: 58 },
-        2: { cellWidth: 20 },
-        3: { cellWidth: 62 },
-        4: { cellWidth: 20 }
-      }
+      head: [["Checklista", "Statusöversikt"]],
+      body: [[
+        `${props.checklistItems.length} kontrollpunkter`,
+        `${props.checklistItems.filter((i) => i.status === "OK").length} OK, ${props.checklistItems.filter((i) => i.status === "AVVIKELSE").length} avvikelse, ${props.checklistItems.filter((i) => i.status === "EJ_KONTROLLERAD").length} ej kontrollerad`
+      ]],
+      styles: { fontSize: 9 }
     });
 
-    const commentRows = props.checklistItems
-      .filter((item) => Boolean(item.comment?.trim()))
-      .map((item) => [
-        item.section,
-        item.label,
-        item.comment?.trim() ?? "-"
-      ]);
+    const groupedBySection = props.checklistItems.reduce<Record<string, ChecklistItem[]>>(
+      (acc, item) => {
+        if (!acc[item.section]) acc[item.section] = [];
+        acc[item.section].push(item);
+        return acc;
+      },
+      {}
+    );
 
-    if (commentRows.length > 0) {
+    Object.entries(groupedBySection).forEach(([section, sectionItems], sectionIndex) => {
       autoTable(doc, {
         startY: (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable
           ?.finalY
           ? ((doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6)
-          : 120,
-        head: [["Kommentarer (fulltext)", "Punkt", "Text"]],
-        body: commentRows,
+          : 100 + sectionIndex * 14,
+        head: [[section, "Status", "Kommentar", "Ersatt del"]],
+        body: sectionItems.map((item) => [
+          item.label,
+          formatChecklistStatus(item.status),
+          item.comment?.trim() || "-",
+          item.partReplaced ? "Ja" : "Nej"
+        ]),
         styles: { fontSize: 8, overflow: "linebreak", cellPadding: 2.2, valign: "top" },
-        headStyles: { fillColor: [15, 23, 42] },
+        headStyles: { fillColor: [30, 64, 175] },
         columnStyles: {
-          0: { cellWidth: 34 },
-          1: { cellWidth: 56 },
-          2: { cellWidth: 98 }
+          0: { cellWidth: 76 },
+          1: { cellWidth: 24 },
+          2: { cellWidth: 62 },
+          3: { cellWidth: 24 }
         }
       });
-    }
+    });
 
     if (props.parts.length > 0) {
       const replacedParts = props.parts.filter((part) => !part.needs_order);
