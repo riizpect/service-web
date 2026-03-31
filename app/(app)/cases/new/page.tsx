@@ -15,6 +15,8 @@ import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Camera } from "lucide-react";
 
+const LOCAL_DRAFT_STORAGE_KEY = "service-case-local-draft-v1";
+
 const formSchema = z.object({
   step: z.number().default(1),
   customer_name: z.string().min(1),
@@ -72,9 +74,12 @@ export default function NewCasePage() {
   const [checklistSectionIndex, setChecklistSectionIndex] = useState(0);
   const [tab, setTab] = useState<"photos" | "parts">("photos");
   const [uploadingTarget, setUploadingTarget] = useState<string | null>(null);
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
   const viperSerialInputRef = useRef<HTMLInputElement | null>(null);
   const vlsSerialInputRef = useRef<HTMLInputElement | null>(null);
   const formTopRef = useRef<HTMLDivElement | null>(null);
+  const saveTimeoutRef = useRef<number | null>(null);
+  const restoredDraftRef = useRef(false);
 
   const methods = useForm<ServiceCaseFormValues>({
     resolver: zodResolver(formSchema),
@@ -88,7 +93,7 @@ export default function NewCasePage() {
     }
   });
 
-  const { register, watch, handleSubmit, setValue, control, getValues } = methods;
+  const { register, watch, handleSubmit, setValue, control, getValues, reset } = methods;
   const currentStep = watch("step") ?? 1;
   const productType = watch("product_type") as ProductType;
   const sections = useMemo(() => getChecklistForProductType(productType), [productType]);
@@ -100,6 +105,10 @@ export default function NewCasePage() {
   const photosArray = useFieldArray({ control, name: "photos" });
 
   useEffect(() => {
+    if (restoredDraftRef.current) {
+      restoredDraftRef.current = false;
+      return;
+    }
     const flatItems = sections.flatMap((section) =>
       section.items.map((item) => ({
         section_key: section.key,
@@ -113,6 +122,40 @@ export default function NewCasePage() {
     setValue("checklist_items", flatItems);
     setChecklistSectionIndex(0);
   }, [sections, setValue]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const savedDraftRaw = window.localStorage.getItem(LOCAL_DRAFT_STORAGE_KEY);
+    if (!savedDraftRaw) return;
+    try {
+      const parsed = JSON.parse(savedDraftRaw) as ServiceCaseFormValues;
+      restoredDraftRef.current = Boolean(parsed.checklist_items?.length);
+      reset(parsed);
+      setChecklistSectionIndex(0);
+      setError("Lokalt utkast återställt.");
+    } catch {
+      window.localStorage.removeItem(LOCAL_DRAFT_STORAGE_KEY);
+    }
+  }, [reset]);
+
+  useEffect(() => {
+    const subscription = watch((value) => {
+      if (typeof window === "undefined") return;
+      if (saveTimeoutRef.current) {
+        window.clearTimeout(saveTimeoutRef.current);
+      }
+      saveTimeoutRef.current = window.setTimeout(() => {
+        window.localStorage.setItem(LOCAL_DRAFT_STORAGE_KEY, JSON.stringify(value));
+        setDraftSavedAt(new Date().toISOString());
+      }, 500);
+    });
+    return () => {
+      subscription.unsubscribe();
+      if (typeof window !== "undefined" && saveTimeoutRef.current) {
+        window.clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [watch]);
 
   useEffect(() => {
     if (currentStep === 2) {
@@ -247,6 +290,9 @@ export default function NewCasePage() {
         }
       }
 
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem(LOCAL_DRAFT_STORAGE_KEY);
+      }
       router.push(`/cases/${caseId}`);
     } catch {
       setError("Något gick fel vid sparning. Försök igen.");
@@ -659,6 +705,11 @@ export default function NewCasePage() {
             )}
 
             {error && <p className="text-sm text-red-600">{error}</p>}
+            {draftSavedAt && (
+              <p className="text-xs text-muted-foreground">
+                Autosparat lokalt: {new Date(draftSavedAt).toLocaleTimeString("sv-SE")}
+              </p>
+            )}
 
             <div className="sticky bottom-16 z-30 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-sm backdrop-blur md:bottom-4">
               <div className="flex items-center justify-between gap-2">
