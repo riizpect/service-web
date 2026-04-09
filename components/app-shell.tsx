@@ -1,10 +1,12 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, PlusSquare, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { createClientSupabaseBrowser } from "@/lib/supabaseClient";
 
 const navItems = [
   { href: "/dashboard", label: "Översikt", icon: LayoutDashboard },
@@ -14,17 +16,60 @@ const navItems = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    const loadUser = async () => {
+      const supabase = createClientSupabaseBrowser();
+      const {
+        data: { user }
+      } = await supabase.auth.getUser();
+      if (!mounted) return;
+      setUserEmail(user?.email ?? null);
+    };
+    void loadUser();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    const supabase = createClientSupabaseBrowser();
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  };
 
   return (
     <div className="min-h-screen bg-slate-100">
       <div className="mx-auto w-full max-w-5xl px-3 pb-24 pt-4 md:px-6 md:pt-6">
         <header className="mb-4 rounded-2xl border border-slate-200 bg-white px-4 py-3">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-            Ferno Serviceverktyg
-          </p>
-          <h1 className="mt-1 text-base font-semibold text-slate-900">
-            Preventivt underhåll
-          </h1>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                Ferno Serviceverktyg
+              </p>
+              <h1 className="mt-1 text-base font-semibold text-slate-900">
+                Preventivt underhåll
+              </h1>
+              <p className="mt-1 text-xs text-slate-500">
+                Inloggad: {userEmail ?? "Laddar..."}
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              disabled={loggingOut}
+            >
+              {loggingOut ? "Loggar ut..." : "Logga ut"}
+            </Button>
+          </div>
         </header>
         {children}
       </div>
