@@ -20,6 +20,8 @@ type LoginFormValues = z.infer<typeof schema>;
 export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [resettingPassword, setResettingPassword] = useState(false);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const form = useForm<LoginFormValues>({
@@ -32,6 +34,7 @@ export default function LoginPage() {
 
   const onSubmit = async (values: LoginFormValues) => {
     setError(null);
+    setInfoMessage(null);
     setLoading(true);
     try {
       const supabase = createClientSupabaseBrowser();
@@ -48,6 +51,39 @@ export default function LoginPage() {
       setError("Något gick fel vid inloggning.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    setError(null);
+    setInfoMessage(null);
+    const email = form.getValues("email");
+    if (!email) {
+      setError("Fyll i din e-postadress först.");
+      return;
+    }
+
+    setResettingPassword(true);
+    try {
+      const supabase = createClientSupabaseBrowser();
+      const redirectTo =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/reset-password`
+          : undefined;
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo
+      });
+      if (resetError) {
+        setError(resetError.message);
+      } else {
+        setInfoMessage(
+          "Om adressen finns registrerad har vi skickat en länk för att byta lösenord."
+        );
+      }
+    } catch {
+      setError("Kunde inte skicka återställningslänk just nu.");
+    } finally {
+      setResettingPassword(false);
     }
   };
 
@@ -83,10 +119,20 @@ export default function LoginPage() {
               )}
             </div>
             {error && <p className="text-sm text-red-600">{error}</p>}
+            {infoMessage && <p className="text-sm text-emerald-700">{infoMessage}</p>}
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full"
+              disabled={loading || resettingPassword}
+              onClick={handleForgotPassword}
+            >
+              {resettingPassword ? "Skickar länk..." : "Glömt lösenord?"}
+            </Button>
             <Button
               type="submit"
               className="w-full"
-              disabled={loading}
+              disabled={loading || resettingPassword}
             >
               {loading ? "Loggar in..." : "Logga in"}
             </Button>
