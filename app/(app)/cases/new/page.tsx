@@ -287,32 +287,32 @@ export default function NewCasePage() {
     const now = new Date();
     const yyyyMmDd = now.toISOString().slice(0, 10);
     const sampleCustomers = [
-      "Ambulansstation Stockholm City",
-      "Ambulansstation Solna",
-      "Ambulansstation Södermalm",
-      "Ambulansstation Göteborg Centrum",
-      "Ambulansstation Malmö Syd"
+      "London Ambulance Station Central",
+      "Manchester Ambulance Station North",
+      "Birmingham Ambulance Response Unit",
+      "Leeds Ambulance Station West",
+      "Liverpool Ambulance Station South"
     ];
-    const sampleLocations = ["Stockholm", "Göteborg", "Malmö", "Uppsala", "Linköping"];
+    const sampleLocations = ["London", "Manchester", "Birmingham", "Leeds", "Liverpool"];
     const okComments = [
-      "Visuell kontroll utan anmärkning.",
-      "Funktionstest godkänt.",
-      "Kontrollerad enligt rutin."
+      "Visual inspection completed without remarks.",
+      "Function test passed.",
+      "Checked according to routine."
     ];
     const fixedComments = [
-      "Delvis åtgärdad på plats, ny kontroll rekommenderas.",
-      "Komponent justerad och verifierad efter åtgärd.",
-      "Slitage åtgärdat vid servicebesöket."
+      "Partly fixed on site, follow-up check recommended.",
+      "Component adjusted and verified after action.",
+      "Wear issue fixed during service visit."
     ];
     const deviationComments = [
-      "Avvikelse upptäckt vid belastningstest, åtgärd behövs.",
-      "Fel upptäckt under funktionskontroll.",
-      "Ej godkänd punkt, kräver uppföljning."
+      "Deviation detected during load test, action required.",
+      "Fault detected during function control.",
+      "Item not approved, follow-up required."
     ];
     const notCheckedComments = [
-      "Punkt ej kontrollerad vid detta besök.",
-      "Ej kontrollerad på grund av tidsbrist.",
-      "Behöver följas upp vid återbesök."
+      "Item not checked during this visit.",
+      "Not checked due to time constraints.",
+      "Needs follow-up at return visit."
     ];
 
     const randomizedChecklist = sections.flatMap((section) =>
@@ -350,23 +350,23 @@ export default function NewCasePage() {
 
     const sampleParts = [
       ...deviationItems.slice(0, 2).map((item, idx) => ({
-        part_name: "Defekt del (ej specificerad)",
+        part_name: "Defective part (unspecified)",
         part_number: "",
         quantity: 1,
-        note: "Identifierad under testkörning",
+        note: "Identified during test run",
         needs_order: true,
         order_status: "Ej beställd" as const,
         priority: idx === 0 ? "Hög" as const : "Medel" as const,
-        reason: `Avvikelse: ${item.item_label}`
+        reason: `Deviation: ${item.item_label}`
       })),
       ...fixedItems
         .filter(() => Math.random() > 0.45)
         .slice(0, 2)
         .map((item, idx) => ({
-          part_name: idx === 0 ? "Låssprint" : "Fästdetalj",
+          part_name: idx === 0 ? "Locking pin" : "Mounting bracket",
           part_number: idx === 0 ? "LP-204" : "FD-118",
           quantity: 1,
-          note: `Bytt på plats (${item.item_label})`,
+          note: `Replaced on site (${item.item_label})`,
           needs_order: false,
           order_status: "Monterad" as const,
           priority: "Låg" as const,
@@ -377,7 +377,7 @@ export default function NewCasePage() {
     setValue("customer_name", randomPick(sampleCustomers));
     setValue("location", randomPick(sampleLocations));
     setValue("service_date", yyyyMmDd);
-    setValue("technician_name", "Andreas Selin");
+    setValue("technician_name", "Andrew Collins");
     setValue("reference_number", `AO-${Math.floor(10000 + Math.random() * 89999)}`);
     if (showViperFields) {
       setValue("viper_serial_number", `VIP-${Math.floor(100000 + Math.random() * 899999)}`);
@@ -397,10 +397,10 @@ export default function NewCasePage() {
       : "Godkänd";
     const finalComment =
       finalStatus === "Godkänd"
-        ? "Samtliga kontroller genomförda utan kritiska anmärkningar."
+        ? "All checks completed without critical remarks."
         : finalStatus === "Godkänd med anmärkning"
-        ? "Ärendet godkänt med anmärkning. Uppföljning rekommenderas."
-        : "Ärendet ej godkänt. Åtgärd och återbesök krävs.";
+        ? "Case approved with remarks. Follow-up is recommended."
+        : "Case not approved. Action and return visit required.";
     setValue("final_status", finalStatus);
     setValue("final_comment", finalComment);
     if (goToSummary) {
