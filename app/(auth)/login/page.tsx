@@ -19,7 +19,10 @@ type LoginFormValues = z.infer<typeof schema>;
 
 export default function LoginPage() {
   const router = useRouter();
+  const demoEmail = process.env.NEXT_PUBLIC_DEMO_EMAIL;
+  const demoPassword = process.env.NEXT_PUBLIC_DEMO_PASSWORD;
   const [loading, setLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
   const [resettingPassword, setResettingPassword] = useState(false);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -87,6 +90,32 @@ export default function LoginPage() {
     }
   };
 
+  const handleDemoLogin = async () => {
+    if (!demoEmail || !demoPassword) {
+      setError("Testkonto är inte konfigurerat än.");
+      return;
+    }
+    setError(null);
+    setInfoMessage(null);
+    setDemoLoading(true);
+    try {
+      const supabase = createClientSupabaseBrowser();
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: demoEmail,
+        password: demoPassword
+      });
+      if (signInError) {
+        setError(signInError.message);
+      } else {
+        router.push("/dashboard");
+      }
+    } catch {
+      setError("Kunde inte logga in med testkonto.");
+    } finally {
+      setDemoLoading(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-8">
       <Card className="w-full max-w-md border-slate-200">
@@ -124,15 +153,26 @@ export default function LoginPage() {
               type="button"
               variant="ghost"
               className="w-full"
-              disabled={loading || resettingPassword}
+              disabled={loading || resettingPassword || demoLoading}
               onClick={handleForgotPassword}
             >
               {resettingPassword ? "Skickar länk..." : "Glömt lösenord?"}
             </Button>
+            {demoEmail && demoPassword && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                disabled={loading || resettingPassword || demoLoading}
+                onClick={handleDemoLogin}
+              >
+                {demoLoading ? "Loggar in..." : "Logga in med testkonto"}
+              </Button>
+            )}
             <Button
               type="submit"
               className="w-full"
-              disabled={loading || resettingPassword}
+              disabled={loading || resettingPassword || demoLoading}
             >
               {loading ? "Loggar in..." : "Logga in"}
             </Button>

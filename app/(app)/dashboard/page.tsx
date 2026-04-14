@@ -56,6 +56,7 @@ function statusVariant(status: string | null): "success" | "warning" | "danger" 
 
 export default async function DashboardPage() {
   const cases = await getCases();
+  const isDemoMode = process.env.NEXT_PUBLIC_DEMO_EMAIL ? true : false;
 
   return (
     <main className="flex-1">
@@ -66,6 +67,13 @@ export default async function DashboardPage() {
             <Button>Nytt serviceärende</Button>
           </Link>
         </div>
+        {isDemoMode && (
+          <Card>
+            <CardContent className="py-3 text-sm text-muted-foreground">
+              Testkonto är aktivt i appen. Testärenden sparas separat från vanliga användare.
+            </CardContent>
+          </Card>
+        )}
 
         {/* TODO: filters/search in later iteration */}
 

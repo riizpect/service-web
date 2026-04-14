@@ -37,6 +37,8 @@ Internt verktyg för förebyggande underhåll och servicedokumentation av Ferno 
    NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
    NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET=service-photos
+   NEXT_PUBLIC_DEMO_EMAIL=demo@ferno.local
+   NEXT_PUBLIC_DEMO_PASSWORD=change-me-demo-password
    ```
 
 3. **Supabase-databas / Supabase database schema**
@@ -121,6 +123,7 @@ Internt verktyg för förebyggande underhåll och servicedokumentation av Ferno 
 
    - Aktivera **Email/password** i Supabase Authentication.
    - Skapa tekniker-konton via Supabase Dashboard (Authentication → Users).
+   - För testkonto: skapa en separat användare i Supabase Users med samma e-post/lösenord som `NEXT_PUBLIC_DEMO_EMAIL` och `NEXT_PUBLIC_DEMO_PASSWORD`.
 
 5. **Utvecklingsserver / Dev server**
 
