@@ -21,6 +21,9 @@ type ServiceCaseRow = {
 
 function translateDemoText(value: string | null): string | null {
   if (!value) return value;
+  const hasSwedishMarkers = /[åäöÅÄÖ]|(?:\b(?:och|med|utan|krävs|återbesök|anmärkning|kontrollerad|serviceplan)\b)/i.test(
+    value
+  );
   const replacements: Array<[string, string]> = [
     ["Demo tekniker", "Demo Technician"],
     ["Visuell kontroll utan anmärkning.", "Visual inspection completed without remarks."],
@@ -35,6 +38,9 @@ function translateDemoText(value: string | null): string | null {
     ["Punkt ej kontrollerad vid detta besök.", "Item not checked during this visit."],
     ["Ej kontrollerad på grund av tidsbrist.", "Not checked due to time constraints."],
     ["Behöver följas upp vid återbesök.", "Needs follow-up at return visit."],
+    ["Luftfilter har bytts enligt serviceplan", "Air filter replaced according to service plan"],
+    ["Luftfilter har bytts neligt serviceplan", "Air filter replaced according to service plan"],
+    ["har bytts enligt serviceplan", "replaced according to service plan"],
     ["Identifierad under testkörning", "Identified during test run"],
     ["Bytt på plats", "Replaced on site"],
     ["Avvikelse:", "Deviation:"],
@@ -42,7 +48,12 @@ function translateDemoText(value: string | null): string | null {
     ["Ärendet godkänt med anmärkning. Uppföljning rekommenderas.", "Case approved with remarks. Follow-up is recommended."],
     ["Ärendet ej godkänt. Åtgärd och återbesök krävs.", "Case not approved. Action and return visit required."]
   ];
-  return replacements.reduce((acc, [from, to]) => acc.replaceAll(from, to), value);
+  const translated = replacements.reduce((acc, [from, to]) => acc.replaceAll(from, to), value);
+  if (translated !== value) return translated;
+  if (hasSwedishMarkers) {
+    return "Demo note (translated): action recorded during service.";
+  }
+  return translated;
 }
 
 async function normalizeDemoData(
@@ -78,11 +89,25 @@ async function normalizeDemoData(
 
   const { data: checklistData } = await supabase
     .from("service_checklist_items")
-    .select("id, comment")
+    .select("id, comment, item_status")
     .in("case_id", caseIds);
-  const checklistRows = (checklistData ?? []) as Array<{ id: string; comment: string | null }>;
+  const checklistRows = (checklistData ?? []) as Array<{
+    id: string;
+    comment: string | null;
+    item_status: string | null;
+  }>;
   for (const row of checklistRows) {
-    const nextComment = translateDemoText(row.comment);
+    const translated = translateDemoText(row.comment);
+    const nextComment =
+      translated === "Demo note (translated): action recorded during service."
+        ? row.item_status === "OK"
+          ? "Checked and approved."
+          : row.item_status === "ATGÄRDAD"
+          ? "Adjusted/repaired during service."
+          : row.item_status === "AVVIKELSE"
+          ? "Deviation detected, action required."
+          : "Not checked during this visit."
+        : translated;
     if (nextComment !== row.comment) {
       await supabase
         .from("service_checklist_items")
