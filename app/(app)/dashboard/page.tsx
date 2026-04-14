@@ -19,6 +19,116 @@ type ServiceCaseRow = {
   requires_return_visit: boolean | null;
 };
 
+function translateDemoText(value: string | null): string | null {
+  if (!value) return value;
+  const replacements: Array<[string, string]> = [
+    ["Demo tekniker", "Demo Technician"],
+    ["Visuell kontroll utan anmärkning.", "Visual inspection completed without remarks."],
+    ["Funktionstest godkänt.", "Function test passed."],
+    ["Kontrollerad enligt rutin.", "Checked according to routine."],
+    ["Delvis åtgärdad på plats, ny kontroll rekommenderas.", "Partly fixed on site, follow-up check recommended."],
+    ["Komponent justerad och verifierad efter åtgärd.", "Component adjusted and verified after action."],
+    ["Slitage åtgärdat vid servicebesöket.", "Wear issue fixed during service visit."],
+    ["Avvikelse upptäckt vid belastningstest, åtgärd behövs.", "Deviation detected during load test, action required."],
+    ["Fel upptäckt under funktionskontroll.", "Fault detected during function control."],
+    ["Ej godkänd punkt, kräver uppföljning.", "Item not approved, follow-up required."],
+    ["Punkt ej kontrollerad vid detta besök.", "Item not checked during this visit."],
+    ["Ej kontrollerad på grund av tidsbrist.", "Not checked due to time constraints."],
+    ["Behöver följas upp vid återbesök.", "Needs follow-up at return visit."],
+    ["Identifierad under testkörning", "Identified during test run"],
+    ["Bytt på plats", "Replaced on site"],
+    ["Avvikelse:", "Deviation:"],
+    ["Samtliga kontroller genomförda utan kritiska anmärkningar.", "All checks completed without critical remarks."],
+    ["Ärendet godkänt med anmärkning. Uppföljning rekommenderas.", "Case approved with remarks. Follow-up is recommended."],
+    ["Ärendet ej godkänt. Åtgärd och återbesök krävs.", "Case not approved. Action and return visit required."]
+  ];
+  return replacements.reduce((acc, [from, to]) => acc.replaceAll(from, to), value);
+}
+
+async function normalizeDemoData(
+  supabase: ReturnType<typeof createClientSupabaseServer>,
+  userId: string
+) {
+  const { data: casesData } = await supabase
+    .from("service_cases")
+    .select("id, technician_name, final_comment")
+    .eq("created_by", userId);
+  const caseRows = (casesData ?? []) as Array<{
+    id: string;
+    technician_name: string | null;
+    final_comment: string | null;
+  }>;
+  for (const row of caseRows) {
+    const nextTechnician = row.technician_name === "Demo tekniker" ? "Demo Technician" : row.technician_name;
+    const nextFinalComment = translateDemoText(row.final_comment);
+    if (nextTechnician !== row.technician_name || nextFinalComment !== row.final_comment) {
+      await supabase
+        .from("service_cases")
+        .update({
+          technician_name: nextTechnician,
+          final_comment: nextFinalComment
+        })
+        .eq("id", row.id)
+        .eq("created_by", userId);
+    }
+  }
+
+  const caseIds = caseRows.map((row) => row.id);
+  if (caseIds.length === 0) return;
+
+  const { data: checklistData } = await supabase
+    .from("service_checklist_items")
+    .select("id, comment")
+    .in("case_id", caseIds);
+  const checklistRows = (checklistData ?? []) as Array<{ id: string; comment: string | null }>;
+  for (const row of checklistRows) {
+    const nextComment = translateDemoText(row.comment);
+    if (nextComment !== row.comment) {
+      await supabase
+        .from("service_checklist_items")
+        .update({ comment: nextComment })
+        .eq("id", row.id);
+    }
+  }
+
+  const { data: partsData } = await supabase
+    .from("service_parts")
+    .select("id, part_name, note, reason")
+    .in("case_id", caseIds);
+  const partRows = (partsData ?? []) as Array<{
+    id: string;
+    part_name: string | null;
+    note: string | null;
+    reason: string | null;
+  }>;
+  for (const row of partRows) {
+    const nextPartName =
+      row.part_name === "Defekt del (ej specificerad)"
+        ? "Defective part (unspecified)"
+        : row.part_name === "Låssprint"
+        ? "Locking pin"
+        : row.part_name === "Fästdetalj"
+        ? "Mounting bracket"
+        : row.part_name;
+    const nextNote = translateDemoText(row.note);
+    const nextReason = translateDemoText(row.reason);
+    if (
+      nextPartName !== row.part_name ||
+      nextNote !== row.note ||
+      nextReason !== row.reason
+    ) {
+      await supabase
+        .from("service_parts")
+        .update({
+          part_name: nextPartName,
+          note: nextNote,
+          reason: nextReason
+        })
+        .eq("id", row.id);
+    }
+  }
+}
+
 async function getCases(): Promise<ServiceCaseRow[]> {
   const cookieStore = cookies();
   const supabase = createClientSupabaseServer(cookieStore);
@@ -26,6 +136,10 @@ async function getCases(): Promise<ServiceCaseRow[]> {
     data: { user }
   } = await supabase.auth.getUser();
   if (!user) return [];
+  const demoEmail = process.env.NEXT_PUBLIC_DEMO_EMAIL;
+  if (demoEmail && user.email?.toLowerCase() === demoEmail.toLowerCase()) {
+    await normalizeDemoData(supabase, user.id);
+  }
 
   const { data, error } = await supabase
     .from("service_cases")
